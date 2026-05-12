@@ -179,7 +179,7 @@ function refresh() {
   if (cities.length === 0) return;
 
   const next =
-    previous && citySet.has(previous) ? previous : getInitialCity();
+    previous && hasCity(previous) ? previous : getInitialCity();
   if (!next) return;
 
   applyCity(next);
