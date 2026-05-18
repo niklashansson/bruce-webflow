@@ -1,6 +1,12 @@
 import "./nav.js";
+import "./announcements.js";
+import "./modal.js";
+import "./accordion.js";
+import "./collapsible.js";
+import "./dropdown.js";
 import "./variables.js";
 import "./city.js";
+import "./location.js";
 import "./slider.js";
 import "./tab.js";
 import "./visual-video.js";

@@ -1,69 +1,33 @@
 /**
  * Nav Component
  *
- * Three independent nav behaviors:
- *   1. Banner dismissal — persists via sessionStorage, applies hide class
- *      synchronously on script load to prevent FOUC
- *   2. Skip-to-main link — focuses <main> for accessibility
- *   3. Scroll state — adds is-scroll-top / is-scroll-up / is-scroll-down
+ * Two independent nav behaviors:
+ *   1. Skip-to-main link — focuses <main> for accessibility
+ *   2. Scroll state — adds is-scroll-top / is-scroll-up / is-scroll-down
  *      classes based on direction, with a distance threshold
- *      to prevent flicker from jitter
+ *      to prevent flicker from jitter. Opt-in per component via
+ *      data-hide-on-scroll.
  *
  * Usage in Webflow:
  *   <div class="nav_component">
  *     <a class="nav_skip_wrap" href="#main">Skip to content</a>
- *     <div class="nav_banner">
- *       <button class="nav_banner_close_wrap">×</button>
- *     </div>
  *   </div>
  *   <main>...</main>
  *
- * Optional per-component threshold override:
- *   <div class="nav_component" data-scroll-threshold="20">
+ * Enable scroll state on a nav:
+ *   <div class="nav_component" data-hide-on-scroll>
  *
- * Banner dismissal persists for the session via sessionStorage key
- * 'hide-nav-banner'.
+ * Optional per-component threshold override:
+ *   <div class="nav_component" data-hide-on-scroll data-scroll-threshold="20">
+ *
  *
  */
 
 import { attrNum } from "./utils.js";
 
 // ── Module-level constants ───────────────────────────────────
-const BANNER_STORAGE_KEY = "hide-nav-banner";
-const BANNER_HIDE_CLASS = "hide-nav-banner";
 const SCROLL_TRIGGER_THRESHOLD = 100;
 const DEFAULT_DIRECTION_THRESHOLD = 16; // px to scroll before flipping direction
-
-// ── Pre-DOM banner hide (FOUC prevention) ────────────────────
-// Run synchronously at script load so the hide class is on <html>
-// before the banner paints. For maximum FOUC protection, also place
-// this snippet inline in Webflow Site Settings → Custom Code → <head>.
-try {
-  if (sessionStorage.getItem(BANNER_STORAGE_KEY) === "true") {
-    document.documentElement.classList.add(BANNER_HIDE_CLASS);
-  }
-} catch (_) {
-  /* storage blocked — banner will show; not fatal */
-}
-
-// ── Banner close ─────────────────────────────────────────────
-
-function initBannerClose() {
-  document.querySelectorAll(".nav_banner_close_wrap").forEach((button) => {
-    const el = /** @type {HTMLElement} */ (button);
-    if (el.dataset.scriptInitialized) return;
-    el.dataset.scriptInitialized = "true";
-
-    button.addEventListener("click", () => {
-      try {
-        sessionStorage.setItem(BANNER_STORAGE_KEY, "true");
-      } catch (_) {
-        /* storage blocked — class still applies for this page view */
-      }
-      document.documentElement.classList.add(BANNER_HIDE_CLASS);
-    });
-  });
-}
 
 // ── Skip link ────────────────────────────────────────────────
 
@@ -94,7 +58,9 @@ function initSkipLink() {
 // ── Scroll state ─────────────────────────────────────────────
 
 function initScrollState() {
-  const components = document.querySelectorAll(".nav_component");
+  const components = document.querySelectorAll(
+    ".nav_component[data-hide-on-scroll]",
+  );
   if (!components.length) return;
 
   // Initial state based on current scroll position
@@ -179,7 +145,6 @@ function initScrollState() {
  * already-initialized elements are skipped via dataset flag.
  */
 export function initNav() {
-  initBannerClose();
   initSkipLink();
   initScrollState();
 }

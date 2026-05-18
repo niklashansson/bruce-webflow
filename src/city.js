@@ -47,7 +47,9 @@
  * ── Programmatic API ─────────────────────────────────────────
  *   window.bruce.city.get()        → "sto"
  *   window.bruce.city.set("cph")   → switch, persist, re-render
- *   window.bruce.city.all()        → [{slug, name, isDefault, vars}, ...]
+ *   window.bruce.city.all()        → [{slug, name, isDefault, coords, vars}, ...]
+ *                                    coords is [lng, lat] if data-city-var-lat
+ *                                    and data-city-var-lng are both set, else null.
  *   window.bruce.city.onChange(fn) → subscribe; returns unsubscribe
  */
 
@@ -61,7 +63,7 @@ const SAFETY_PASS_DELAYS = [500, 1500, 3500];
 
 /** @type {Set<(slug: string) => void>} */
 const listeners = new Set();
-/** @type {Array<{slug: string, name: string, isDefault: boolean, vars: Record<string, string>}>} */
+/** @type {Array<{slug: string, name: string, isDefault: boolean, coords: [number, number] | null, vars: Record<string, string>}>} */
 let cities = [];
 /** @type {Set<string>} */
 let knownVarKeys = new Set();
@@ -76,26 +78,41 @@ function loadCities() {
   const next = [];
   const nextVarKeys = new Set();
 
-  document.querySelectorAll(`${LIST_SELECTOR} [data-city-slug]`).forEach((el) => {
-    const slug = el.getAttribute("data-city-slug");
-    if (!slug) return;
+  document
+    .querySelectorAll(`${LIST_SELECTOR} [data-city-slug]`)
+    .forEach((el) => {
+      const slug = el.getAttribute("data-city-slug");
+      if (!slug) return;
 
-    /** @type {Record<string, string>} */
-    const vars = {};
-    for (const attr of el.attributes) {
-      if (!attr.name.startsWith(VAR_PREFIX)) continue;
-      const key = attr.name.slice(VAR_PREFIX.length);
-      vars[key] = attr.value;
-      nextVarKeys.add(key);
-    }
+      /** @type {Record<string, string>} */
+      const vars = {};
+      for (const attr of el.attributes) {
+        if (!attr.name.startsWith(VAR_PREFIX)) continue;
+        const key = attr.name.slice(VAR_PREFIX.length);
+        vars[key] = attr.value;
+        nextVarKeys.add(key);
+      }
 
-    next.push({
-      slug,
-      name: el.getAttribute("data-city-name") ?? "",
-      isDefault: attrBool(/** @type {HTMLElement} */ (el), "data-city-default"),
-      vars,
+      // lat/lng come in as `data-city-var-*` strings; parse once here so
+      // consumers get a typed [lng, lat] tuple (Mapbox convention) and a
+      // missing-or-invalid pair surfaces as null.
+      const lat = parseFloat(vars.lat);
+      const lng = parseFloat(vars.lng);
+      const coords = isNaN(lat) || isNaN(lng) ? null : [lng, lat];
+
+      console.log(vars);
+
+      next.push({
+        slug,
+        name: el.getAttribute("data-city-name") ?? "",
+        isDefault: attrBool(
+          /** @type {HTMLElement} */ (el),
+          "data-city-default",
+        ),
+        coords,
+        vars,
+      });
     });
-  });
 
   cities = next;
   knownVarKeys = nextVarKeys;
@@ -178,8 +195,7 @@ function refresh() {
   loadCities();
   if (cities.length === 0) return;
 
-  const next =
-    previous && hasCity(previous) ? previous : getInitialCity();
+  const next = previous && hasCity(previous) ? previous : getInitialCity();
   if (!next) return;
 
   applyCity(next);
@@ -238,7 +254,8 @@ document.addEventListener("keydown", (e) => {
   const trigger = /** @type {Element | null} */ (e.target)?.closest?.(
     "[data-set-city]",
   );
-  if (!trigger || trigger.tagName === "BUTTON" || trigger.tagName === "A") return;
+  if (!trigger || trigger.tagName === "BUTTON" || trigger.tagName === "A")
+    return;
   handleSwitcher(e);
 });
 

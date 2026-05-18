@@ -4,9 +4,8 @@
   "description": "",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "parcel build src/index.js --dist-dir dist --no-scope-hoist",
-    "start": "parcel src/index.js",
-    "start:video": "parcel src/visual-video.js"
+    "build": "parcel build src/index.js src/studios.js --dist-dir dist --no-scope-hoist",
+    "start": "parcel src/index.js src/studios.js"
   },
   "keywords": [],
   "author": "",

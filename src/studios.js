@@ -2,16 +2,16 @@
 // reacting to filter / sort / load changes. Clusters items client-side with
 // supercluster so each point + cluster stays as a DOM-based HTML marker.
 //
-// Requires mapbox-gl + supercluster + Swiper loaded via CDN in the Webflow site <head>:
+// Requires mapbox-gl + supercluster loaded via CDN in the Webflow site <head>:
 // <link href="https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.css" rel="stylesheet">
 // <script src="https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.js"></script>
 // <script src="https://unpkg.com/supercluster@8.0.0/dist/supercluster.min.js"></script>
-// <link href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" rel="stylesheet">
-// <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 // <script type="module">
 //import { registerSheetElements } from "https://cdn.jsdelivr.net/npm/pure-web-bottom-sheet@0.6.0/dist/web.client.js";
 // registerSheetElements();
 // </script>
+
+import { requestUserLocation } from "./location.js";
 
 const FS_LIST_INSTANCE_KEY = "studios";
 
@@ -35,18 +35,28 @@ const FIT_BOUNDS_CONFIG = { duration: 500, maxZoom: 12 };
 const FIT_BOUNDS_BREATHING_ROOM = 24;
 const MARKER_FADE_DURATION = 250;
 const USER_LOCATION_ZOOM = 11;
-const USER_LOCATION_TIMEOUT = 8000;
+const CITY_ZOOM = 11;
 
 const CLUSTER_CONFIG = { radius: 50, maxZoom: 14, minPoints: 6 };
 const CLUSTER_EXPANSION_PADDING = 0.5; // extra zoom beyond expansionZoom
-const FALLBACK_CLUSTER_SIZES = { small: 32, medium: 40, large: 48, xl: 56 };
-const FALLBACK_CLUSTER_CLASS = "studios-cluster--fallback";
+
+// Filtered-count display: counts above this collapse to the "over" copy
+// ("Over 1000 studios") instead of the exact number. Each Webflow locale
+// authors the surrounding copy directly in Designer — the number is the
+// only thing JS injects, into [data-studios-count-slot].
+const OVER_COUNT_THRESHOLD = 1000;
 
 const POPUP_CLASS = "studios-popup";
 
 const SHEET_HEIGHT_VAR = "--studios-sheet-height";
 const SHEET_CHANGING_CLASS = "studios-sheet-changing";
+const SHEET_READY_CLASS = "studios-sheet-ready";
 const SHEET_SETTLE_DEBOUNCE_MS = 120;
+
+// Cheap filters resolve synchronously and a "filtering" flash would just
+// strobe. We only commit to the filtering state if the render hasn't
+// landed within this window.
+const FILTERING_DELAY_MS = 80;
 
 const S = {
   component: '[data-studios-element="component"]',
@@ -54,10 +64,9 @@ const S = {
   marker: '[data-studios-element="marker"]',
   popup: '[data-studios-element="popup"]',
   clusterTemplate: '[data-studios-element="cluster-template"]',
-  loading: '[data-studios-element="loading"]',
   locateButton: '[data-studios-element="locate"]',
   searchAreaButton: '[data-studios-element="search-area"]',
-  userLocation: '[data-studios-element="user-location"]',
+  userLocationTemplate: '[data-studios-element="user-location-template"]',
   sheet: '[data-studios-element="sheet"]',
   content: '[data-studios-element="content"]',
   contentDesktop: '[data-studios-element="content-desktop"]',
@@ -66,48 +75,13 @@ const S = {
   lat: '[data-studios-field="lat"]',
   lng: '[data-studios-field="lng"]',
   id: '[data-studios-field="id"]',
+  countDisplay: '[data-studios-element="count-display"]',
+  countMode: "[data-studios-count-mode]",
+  countSlot: "[data-studios-count-slot]",
 };
 
 let mapboxgl = null;
 const initializedInstances = new WeakSet();
-
-// Browser geolocation → [lng, lat] or null on denial / timeout / unavailable.
-// External timeout guards against stuck permission prompts (the native
-// `timeout` option only counts time after permission is granted).
-function requestUserLocation() {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) return resolve(null);
-    let settled = false;
-    const finish = (result) => {
-      if (settled) return;
-      settled = true;
-      resolve(result);
-    };
-    const timer = setTimeout(() => finish(null), USER_LOCATION_TIMEOUT);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        clearTimeout(timer);
-        finish([pos.coords.longitude, pos.coords.latitude]);
-      },
-      () => {
-        clearTimeout(timer);
-        finish(null);
-      },
-      {
-        timeout: USER_LOCATION_TIMEOUT,
-        maximumAge: 60_000,
-        enableHighAccuracy: false,
-      },
-    );
-  });
-}
-
-// Shared across map instances so the permission prompt only fires once.
-let initialLocationPromise = null;
-function getInitialUserLocation() {
-  if (!initialLocationPromise) initialLocationPromise = requestUserLocation();
-  return initialLocationPromise;
-}
 
 function getResponsiveZoom() {
   return window.innerWidth <= ZOOM_CONFIG.breakpoint
@@ -115,54 +89,28 @@ function getResponsiveZoom() {
     : ZOOM_CONFIG.desktop;
 }
 
-function createFallbackMarkerEl() {
-  const el = document.createElement("div");
-  el.style.cssText =
-    "width:16px;height:16px;border-radius:50%;background:#000;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.3);cursor:pointer";
-  return el;
-}
-
-function createFallbackUserLocationEl() {
-  const el = document.createElement("div");
-  el.className = "studios-user-location studios-user-location--fallback";
-  el.style.cssText =
-    "width:18px;height:18px;border-radius:50%;background:#4285f4;border:3px solid #fff;box-shadow:0 0 0 6px rgba(66,133,244,0.3),0 2px 6px rgba(0,0,0,0.3);pointer-events:none";
-  return el;
+// null when city.js hasn't booted yet or the active city has no lat/lng
+// configured — callers fall back to DEFAULT_CENTER / fit-to-features.
+function getSelectedCityCoords() {
+  const api = /** @type {any} */ (window).bruce?.city;
+  if (!api) return null;
+  const slug = api.get();
+  return api.all().find((c) => c.slug === slug)?.coords ?? null;
 }
 
 function getClusterSizeTier(count) {
-  if (count < 10) return "small";
-  if (count < 50) return "medium";
-  if (count < 200) return "large";
+  if (count < 10) return "sm";
+  if (count < 50) return "md";
+  if (count < 200) return "lg";
   return "xl";
 }
 
-// Single source of truth for applying count-dependent styling to a cluster
-// element. Handles both templated and fallback clusters.
 function applyClusterMeta(el, count, countSlotSelector) {
   if (!(el instanceof HTMLElement)) return;
-  const tier = getClusterSizeTier(count);
-  el.dataset.size = tier;
+  el.dataset.size = getClusterSizeTier(count);
   el.style.setProperty("--studios-cluster-count", String(count));
   const slot = countSlotSelector ? el.querySelector(countSlotSelector) : null;
   if (slot) slot.textContent = String(count);
-  if (el.classList.contains(FALLBACK_CLUSTER_CLASS)) {
-    const size = FALLBACK_CLUSTER_SIZES[tier];
-    el.style.minWidth = `${size}px`;
-    el.style.height = `${size}px`;
-    el.style.padding = `0 ${Math.round(size / 4)}px`;
-    el.style.fontSize = `${Math.max(12, Math.round(size * 0.3))}px`;
-    el.textContent = String(count);
-  }
-}
-
-function createFallbackClusterEl(count) {
-  const el = document.createElement("div");
-  el.className = `studios-cluster ${FALLBACK_CLUSTER_CLASS}`;
-  el.style.cssText =
-    "display:inline-flex;align-items:center;justify-content:center;border-radius:999px;background:#000;color:#fff;font-weight:600;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.25);";
-  applyClusterMeta(el, count);
-  return el;
 }
 
 // Webflow CMS values are immutable post-render, so parsing once per element
@@ -186,11 +134,17 @@ function extractOne(el) {
     return null;
   }
 
+  const markerEl = el.querySelector(S.marker);
+  if (!markerEl) {
+    featureCache.set(el, null);
+    return null;
+  }
+
   const idEl = el.querySelector(S.id);
   const feature = {
     coordinates: [lng, lat],
     id: idEl ? idEl.textContent.trim() : "",
-    markerEl: el.querySelector(S.marker),
+    markerEl,
     popupEl: el.querySelector(S.popup),
   };
   featureCache.set(el, feature);
@@ -211,7 +165,7 @@ function extractFeatures(elements) {
   if (skipped && !hasWarnedAboutSkipped) {
     hasWarnedAboutSkipped = true;
     console.warn(
-      `[studios-map] Extracted ${features.length} / ${elements.length} items. Skipped ${skipped} with missing or invalid ${S.lat} / ${S.lng}. (Logged once per session.)`,
+      `[studios-map] Extracted ${features.length} / ${elements.length} items. Skipped ${skipped} with missing or invalid ${S.lat} / ${S.lng} / ${S.marker}. (Logged once per session.)`,
     );
   }
   return features;
@@ -240,7 +194,7 @@ function cloneTemplate(sourceEl) {
 }
 
 function buildMarkerElement(feature) {
-  return cloneTemplate(feature.markerEl) || createFallbackMarkerEl();
+  return cloneTemplate(feature.markerEl);
 }
 
 function buildPopupContent(feature) {
@@ -249,9 +203,34 @@ function buildPopupContent(feature) {
 
 function buildClusterElement(templateEl, count) {
   const clone = cloneTemplate(templateEl);
-  if (!clone) return createFallbackClusterEl(count);
   applyClusterMeta(clone, count, S.count);
   return clone;
+}
+
+// Filtered-count display. Author once per component with three mode slots:
+//   <div data-studios-element="count-display">
+//     <span data-studios-count-mode="singular"><span data-studios-count-slot></span> studio</span>
+//     <span data-studios-count-mode="plural"><span data-studios-count-slot></span> studios</span>
+//     <span data-studios-count-mode="over">Over <span data-studios-count-slot></span> studios</span>
+//   </div>
+// JS picks the active mode by count, writes the number into that mode's slot,
+// and toggles `hidden` on the others. Surrounding copy is plain DOM text, so
+// Webflow Localization per-locale edits translate it with no JS changes.
+function updateCountDisplay(component, count) {
+  const display = component.querySelector(S.countDisplay);
+  if (!display) return;
+
+  const mode =
+    count > OVER_COUNT_THRESHOLD ? "over" : count === 1 ? "singular" : "plural";
+  const slotValue = mode === "over" ? OVER_COUNT_THRESHOLD : count;
+
+  display.querySelectorAll(S.countMode).forEach((modeEl) => {
+    const isActive = modeEl.getAttribute("data-studios-count-mode") === mode;
+    modeEl.hidden = !isActive;
+    if (!isActive) return;
+    const slot = modeEl.querySelector(S.countSlot);
+    if (slot) slot.textContent = String(slotValue);
+  });
 }
 
 function createMap(container) {
@@ -259,7 +238,7 @@ function createMap(container) {
     container,
     style: MAPBOX_STYLE,
     projection: "globe",
-    center: DEFAULT_CENTER,
+    center: getSelectedCityCoords() || DEFAULT_CENTER,
     zoom: getResponsiveZoom(),
     attributionControl: false,
   });
@@ -416,6 +395,10 @@ function setupSheetHeightVar(component, onSettle) {
         if (Math.abs(h - lastHeight) < 1) return;
         lastHeight = h;
         root.style.setProperty(SHEET_HEIGHT_VAR, `${h}px`);
+        // Marks first successful measurement so CSS can gate sheet-height
+        // -dependent positioning (e.g. spinner offset) and avoid the
+        // pre-init "var unset → fallback 0" → "var set → real value" jump.
+        root.classList.add(SHEET_READY_CLASS);
         markChanging();
       });
     };
@@ -464,20 +447,61 @@ function setupStudiosInstance(fsListInstance) {
   }
 
   const clusterTemplateEl = component.querySelector(S.clusterTemplate);
-  if (clusterTemplateEl && !clusterTemplateEl.querySelector(S.count)) {
+  if (!clusterTemplateEl) {
+    console.warn(
+      `[studios-map] Missing ${S.clusterTemplate} inside`,
+      component,
+    );
+    return;
+  }
+  if (!clusterTemplateEl.querySelector(S.count)) {
     console.warn(
       `[studios-map] Cluster template has no ${S.count} slot — the count won't update. Add data-studios-field="count" to a text element inside the cluster template.`,
     );
   }
-  const loadingEl = component.querySelector(S.loading);
-  function setLoading(isLoading) {
-    if (!loadingEl) return;
-    loadingEl.style.display = isLoading ? "" : "none";
+  // data-state on the component drives all loading/ready styling.
+  // CSS reads `[data-studios-element="component"][data-state="…"]`:
+  //   loading   → initial CMS stream; before first render
+  //   filtering → filter changed and render is in flight > FILTERING_DELAY_MS
+  //   ready     → render done (the 0-result case is covered by the count
+  //               display rendering "0 studios"; no separate empty state)
+  let currentState = "loading";
+  let filteringTimeoutId = null;
+  component.dataset.state = currentState;
+
+  function setState(next) {
+    if (filteringTimeoutId !== null) {
+      clearTimeout(filteringTimeoutId);
+      filteringTimeoutId = null;
+    }
+    if (next === currentState) return;
+    currentState = next;
+    component.dataset.state = next;
+  }
+
+  function scheduleFilteringTransition() {
+    // Initial load owns its state — never downgrade loading to filtering.
+    if (currentState === "loading" || currentState === "filtering") return;
+    if (filteringTimeoutId !== null) return;
+    filteringTimeoutId = setTimeout(() => {
+      filteringTimeoutId = null;
+      currentState = "filtering";
+      component.dataset.state = "filtering";
+    }, FILTERING_DELAY_MS);
   }
 
   const locateButtonEl = component.querySelector(S.locateButton);
   const searchAreaButtonEl = component.querySelector(S.searchAreaButton);
-  const userLocationTemplateEl = component.querySelector(S.userLocation);
+  const userLocationTemplateEl = component.querySelector(
+    S.userLocationTemplate,
+  );
+  if (!userLocationTemplateEl) {
+    console.warn(
+      `[studios-map] Missing ${S.userLocationTemplate} inside`,
+      component,
+    );
+    return;
+  }
 
   // Dirty flag on the search-area button — `.is-active` matches the
   // site-wide Finsweet convention (`fs-list-activeclass`).
@@ -490,9 +514,6 @@ function setupStudiosInstance(fsListInstance) {
 
   const map = createMap(mapTargetEl);
   map.addControl(new mapboxgl.AttributionControl({ compact: true }));
-
-  // Debug handle for console diagnostics.
-  if (typeof window !== "undefined") window.__map = map;
 
   setupResponsiveContent(component);
   // Sheet coverage is read fresh on each explicit camera op (fit, locate,
@@ -527,7 +548,6 @@ function setupStudiosInstance(fsListInstance) {
   // rebuild supercluster once with the full dataset instead of per-page.
   const pendingCmsLoad = fsListInstance.loadingPaginatedItems;
   let cmsLoadDone = !pendingCmsLoad;
-  setLoading(!cmsLoadDone);
   pendingCmsLoad?.finally(() => {
     cmsLoadDone = true;
     if (!mapPanTriggered) fsListInstance.triggerHook("filter");
@@ -539,9 +559,10 @@ function setupStudiosInstance(fsListInstance) {
       userLocationMarker.setLngLat(loc);
       return;
     }
-    const el =
-      cloneTemplate(userLocationTemplateEl) || createFallbackUserLocationEl();
-    userLocationMarker = new mapboxgl.Marker({ element: el, anchor: "center" })
+    userLocationMarker = new mapboxgl.Marker({
+      element: cloneTemplate(userLocationTemplateEl),
+      anchor: "center",
+    })
       .setLngLat(loc)
       .addTo(map);
   }
@@ -552,6 +573,18 @@ function setupStudiosInstance(fsListInstance) {
     map.flyTo({
       center: loc,
       zoom: USER_LOCATION_ZOOM,
+      duration: FIT_BOUNDS_CONFIG.duration,
+      padding: sheetPadding(),
+    });
+  }
+
+  function flyToCity() {
+    if (!isLoaded) return;
+    const loc = getSelectedCityCoords();
+    if (!loc) return;
+    map.flyTo({
+      center: loc,
+      zoom: CITY_ZOOM,
       duration: FIT_BOUNDS_CONFIG.duration,
       padding: sheetPadding(),
     });
@@ -568,52 +601,7 @@ function setupStudiosInstance(fsListInstance) {
     return feature.id || feature.coordinates.join(",");
   }
 
-  let activeSwiper = null;
-
-  function destroyActiveSwiper() {
-    if (!activeSwiper) return;
-    activeSwiper.destroy(true, true);
-    activeSwiper = null;
-  }
-
-  function initPopupSwiper(root) {
-    const swiperEl = root.querySelector(".swiper");
-    if (!swiperEl) return null;
-    if (typeof window.Swiper !== "function") {
-      console.warn(
-        "[studios-map] Swiper not found on window. Add the CDN script to the Webflow <head>.",
-      );
-      return null;
-    }
-
-    return new window.Swiper(swiperEl, {
-      slidesPerView: 1,
-      followFinger: true,
-      centeredSlides: false,
-      autoHeight: false,
-      speed: 500,
-      keyboard: {
-        enabled: true,
-        onlyInViewport: true,
-      },
-      navigation: {
-        nextEl: root.querySelector(".studios_image-slider_button.is-next"),
-        prevEl: root.querySelector(".studios_image-slider_button.is-previous"),
-      },
-      pagination: {
-        el: root.querySelector(".studios_image-slider_bullet_list"),
-        bulletActiveClass: "is-active",
-        bulletClass: ".studios_image-slider_bullet_item",
-        bulletElement: "button",
-        clickable: true,
-      },
-      slideActiveClass: "is-active",
-      slideDuplicateActiveClass: "is-active",
-    });
-  }
-
   function closePopup() {
-    destroyActiveSwiper();
     if (activePopup) {
       activePopup.remove();
       activePopup = null;
@@ -637,18 +625,16 @@ function setupStudiosInstance(fsListInstance) {
       closeOnClick: true,
       maxWidth: "none",
     })
+
       .setLngLat(feature.coordinates)
       .setDOMContent(content)
       .addTo(map);
 
     // Mapbox's own close paths (X button, closeOnClick, ESC) don't route through
-    // closePopup — listen for 'close' so Swiper is destroyed and refs cleared.
+    // closePopup — listen for 'close' so the ref stays in sync.
     activePopup.on("close", () => {
-      destroyActiveSwiper();
       activePopup = null;
     });
-
-    activeSwiper = initPopupSwiper(content);
   }
 
   function attachMarker(el, coords, onClick) {
@@ -829,12 +815,13 @@ function setupStudiosInstance(fsListInstance) {
       fitToFeatures(map, features, sheetCoverage());
     }
 
-    // First successful render: try to zoom to the user's location when we
-    // learn it. If location is denied / times out / unavailable, the map
-    // stays on the fit-to-all view we just applied.
+    // First successful render: fly to the selected city. If the active city
+    // has no coords (or city.js hasn't booted yet), the fit-to-all view we
+    // just applied stays in place — the city.onChange subscription below
+    // will re-fly the map once the city activates.
     if (!initialRenderDone) {
       initialRenderDone = true;
-      getInitialUserLocation().then(showUserLocation);
+      flyToCity();
     }
   }
 
@@ -858,6 +845,15 @@ function setupStudiosInstance(fsListInstance) {
   map.on("moveend", (e) => {
     renderClusters();
     if (e.originalEvent) setSearchAreaDirty(true);
+  });
+
+  // City switch → re-center the map. Gated on initialRenderDone so an
+  // activation that lands between map.load and the first render doesn't
+  // start a flyTo that fitToFeatures will immediately interrupt — the
+  // initial-render block owns that case. After the first render, every
+  // slug change re-flies here.
+  /** @type {any} */ (window).bruce?.city?.onChange?.(() => {
+    if (initialRenderDone) flyToCity();
   });
 
   // Locate button → request a fresh location on each click (bypasses the
@@ -906,6 +902,7 @@ function setupStudiosInstance(fsListInstance) {
       });
     }
     filteredItems = result;
+    scheduleFilteringTransition();
     return result;
   });
 
@@ -915,13 +912,21 @@ function setupStudiosInstance(fsListInstance) {
   // and `renderClusters` already ran on moveend. On FS-driven updates we
   // do the full rebuild + refit so the map follows the user's intent.
   fsListInstance.addHook("afterRender", (items) => {
+    // Count display reflects the post-filter, pre-pagination set; update
+    // before any early return so map-driven and in-progress-load renders
+    // still keep the count in sync.
+    updateCountDisplay(component, filteredItems.length);
     if (mapPanTriggered) {
       mapPanTriggered = false;
+      setState("ready");
       return items;
     }
+    // Per-page CMS-load renders run through here while items are still
+    // streaming in — keep the loading state until pendingCmsLoad resolves
+    // and re-triggers the filter pass below.
     if (!cmsLoadDone) return items;
     render(extractFeatures(filteredItems.map((i) => i.element)));
-    setLoading(false);
+    setState("ready");
     return items;
   });
 }
