@@ -22,10 +22,6 @@
  * works — each wrap resolves only its own direct trigger and content, so
  * nested triggers don't toggle the outer wrap.
  *
- * Optional integrations (detected at runtime):
- *   - ScrollTrigger.refresh() after each transition so pinned sections
- *     re-measure once the height settles.
- *
  * Webflow markup:
  *   <div class="collapsible_wrap"
  *        data-open-by-default="True"
@@ -99,10 +95,6 @@ export function initCollapsible() {
       const getMirrors = () =>
         mirrorSelector ? document.querySelectorAll(mirrorSelector) : [];
 
-      const refresh = () => {
-        if (typeof ScrollTrigger !== "undefined") ScrollTrigger.refresh();
-      };
-
       /** @type {Animation | null} */
       let currentAnimation = null;
 
@@ -145,7 +137,6 @@ export function initCollapsible() {
 
         if (instant) {
           content.style.height = "";
-          refresh();
           return;
         }
 
@@ -154,7 +145,6 @@ export function initCollapsible() {
 
         animateTo(from, to, () => {
           content.style.height = "";
-          refresh();
         });
       };
 
@@ -171,7 +161,6 @@ export function initCollapsible() {
         animateTo(from, 0, () => {
           content.style.height = "";
           content.style.display = "none";
-          refresh();
         });
       };
 

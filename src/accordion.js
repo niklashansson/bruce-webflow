@@ -14,9 +14,6 @@
  *   - `.u-display-contents` wrappers are unwrapped in place
  *   - A `.w-dyn-list` is collapsed to its non-`.w-condition-invisible` children
  *
- * Optional integrations (detected at runtime):
- *   - ScrollTrigger.refresh() after open/close so pinned sections re-measure
- *
  * Webflow markup (style with whatever classes you want):
  *   <div data-accordion-element="list"
  *        data-close-previous="True"
@@ -109,10 +106,6 @@ export function initAccordion() {
       contentEl.style.display = "none";
       contentEl.style.overflow = "hidden";
 
-      const refresh = () => {
-        if (typeof ScrollTrigger !== "undefined") ScrollTrigger.refresh();
-      };
-
       /** @type {Animation | null} */
       let currentAnimation = null;
 
@@ -169,7 +162,6 @@ export function initAccordion() {
         animateTo(from, 0, () => {
           contentEl.style.height = "";
           contentEl.style.display = "none";
-          refresh();
         });
       };
       closeFunctions[itemIndex] = closeAccordion;
@@ -191,7 +183,6 @@ export function initAccordion() {
 
         if (instant) {
           contentEl.style.height = "";
-          refresh();
           return;
         }
 
@@ -202,7 +193,6 @@ export function initAccordion() {
 
         animateTo(from, to, () => {
           contentEl.style.height = "";
-          refresh();
         });
       };
 

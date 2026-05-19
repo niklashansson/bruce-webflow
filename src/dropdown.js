@@ -9,9 +9,6 @@
  *   - data-open-on-hover-in="True"     mouseenter on the wrap opens it
  *   - data-close-on-hover-out="True"   mouseleave on the wrap closes it
  *
- * Optional integrations (detected at runtime):
- *   - ScrollTrigger.refresh() after open/close so pinned sections re-measure
- *
  * Webflow markup (style with whatever classes you want):
  *   <div data-dropdown-element="wrap"
  *        data-open-on-hover-in="True"
@@ -142,10 +139,6 @@ export function initDropdown() {
     content.style.display = "none";
     content.style.transformOrigin = "top";
 
-    const refresh = () => {
-      if (typeof ScrollTrigger !== "undefined") ScrollTrigger.refresh();
-    };
-
     /** @type {Animation | null} */
     let currentAnimation = null;
 
@@ -249,7 +242,6 @@ export function initDropdown() {
           clearInlineState();
           // Let descendants overflow once the dropdown is settled open.
           content.style.overflow = "";
-          refresh();
         },
       );
     };
@@ -274,7 +266,6 @@ export function initDropdown() {
           content.style.display = "none";
           wrap.style.zIndex = "";
           if (allClosed()) zCounter = 0;
-          refresh();
         },
       );
     };
