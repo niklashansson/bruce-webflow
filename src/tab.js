@@ -1,16 +1,19 @@
 /**
  * Tab Component
  *
- * Accessible tab pattern with optional autoplay, slide transitions,
- * accordion mode, and Finsweet CMS integration.
+ * Accessible tab pattern with optional autoplay, accordion mode, and
+ * Finsweet CMS integration. No external dependencies.
+ *
+ * Autoplay drives a `--progress` custom property (0→1) on `.tab_wrap` via
+ * requestAnimationFrame, so any CSS keyed off that variable updates each
+ * frame. Panel switches and accordion-variant content toggle instantly —
+ * style transitions live in CSS, not here.
  *
  * Usage in Webflow:
  *   <div class="tab_wrap"
  *        data-loop-controls="True|False"        (default False)
- *        data-slide-tabs="True|False"            (default False)
  *        data-pause-on-hover="True|False"        (default False)
  *        data-autoplay-duration="5"              (seconds; 0 = off)
- *        data-duration="0.3"                     (transition seconds)
  *        data-tab-component-id="features"        (optional, for deep linking)
  *   >
  *     <div class="tab_button_list">
@@ -29,9 +32,6 @@
  *   </div>
  *
  * Deep linking: ?tab-id=features-overview activates that tab on load.
- *
- * Loaded globally — GSAP loaded via CDN in Site Settings (optional;
- * graceful fallback to instant transitions when absent).
  */
 
 import {
@@ -51,16 +51,6 @@ function slugify(value) {
   return value.toLowerCase().replaceAll(" ", "-");
 }
 
-/** Check whether GSAP is available as a global. */
-function hasGsap() {
-  return typeof (/** @type {any} */ (window).gsap) !== "undefined";
-}
-
-/** Check whether ScrollTrigger is available. */
-function hasScrollTrigger() {
-  return typeof (/** @type {any} */ (window).ScrollTrigger) !== "undefined";
-}
-
 // ── Init a single tab component ──────────────────────────────
 
 /**
@@ -72,10 +62,8 @@ function initComponent(tabWrap, componentIndex) {
 
   // ── Props ──────────────────────────────────────────────
   const loopControls = attrBool(tabWrap, "data-loop-controls");
-  const slideTabs = attrBool(tabWrap, "data-slide-tabs");
   const pauseOnHover = attrBool(tabWrap, "data-pause-on-hover");
   let autoplay = attrNum(tabWrap, "data-autoplay-duration", 0);
-  const duration = attrNum(tabWrap, "data-duration", 0.3);
 
   // ── Required DOM ───────────────────────────────────────
   const buttonList = /** @type {HTMLElement | null} */ (
@@ -148,39 +136,17 @@ function initComponent(tabWrap, componentIndex) {
     return;
   }
 
-  // ── Accordion timelines (only built if GSAP present) ──
-  /** @type {Array<any | null>} */
-  const accordionTimelines = buttonWraps.map((wrap) => {
+  // Per-button accordion content slot (null for non-accordion variants).
+  /** @type {Array<HTMLElement | null>} */
+  const accordionContents = buttonWraps.map((wrap) => {
     if (wrap.getAttribute("data-wf--tab-link--variant") !== "accordion")
       return null;
     const content = /** @type {HTMLElement | null} */ (
       wrap.querySelector("[data-tab-link-content]")
     );
-    if (!content || !hasGsap()) return null;
-
-    const gsap = /** @type {any} */ (window).gsap;
+    if (!content) return null;
     content.style.display = "none";
-    content.style.overflow = "hidden";
-
-    const tl = gsap.timeline({
-      paused: true,
-      defaults: { duration, ease: "power1.inOut" },
-      onComplete: () => {
-        if (hasScrollTrigger())
-          /** @type {any} */ (window).ScrollTrigger.refresh();
-      },
-      onReverseComplete: () => {
-        if (hasScrollTrigger())
-          /** @type {any} */ (window).ScrollTrigger.refresh();
-      },
-    });
-    tl.set(content, { display: "block" });
-    tl.fromTo(
-      content,
-      { height: 0, opacity: 0 },
-      { height: "auto", opacity: 1 },
-    );
-    return tl;
+    return content;
   });
 
   // ── Initial ARIA setup ─────────────────────────────────
@@ -194,12 +160,10 @@ function initComponent(tabWrap, componentIndex) {
 
   // ── State ──────────────────────────────────────────────
   let activeIndex = -1;
-  /** @type {any | null} */
-  let currentTl = null;
-  /** @type {any | null} */
+  /** @type {{play: () => void, pause: () => void, restart: () => void} | null} */
   let autoplayTl = null;
   // True when the user has explicitly paused autoplay via the toggle button.
-  // (Name reflects intent — `updateAuto` keeps the timeline paused while this is true.)
+  // (Name reflects intent — `updateAuto` keeps the cycle paused while this is true.)
   let userPaused = true;
 
   // Mark initialized after DOM restructuring but before behavior wiring
@@ -211,34 +175,9 @@ function initComponent(tabWrap, componentIndex) {
    *
    * @param {number} index
    * @param {boolean} [focus]
-   * @param {boolean} [animate]
    */
-  const makeActive = (index, focus = false, animate = true) => {
-    if (index === activeIndex && !currentTl) return;
-
-    const gsap = /** @type {any} */ (window).gsap;
-    const useGsap = hasGsap();
-
-    if (currentTl) {
-      currentTl.kill();
-      currentTl = null;
-    }
-
-    // Force-clean any panel left mid-animation
-    panelItems.forEach((panel, i) => {
-      if (i !== index && i !== activeIndex) {
-        panel.style.display = "none";
-        panel.style.opacity = "";
-        if (slideTabs) {
-          panel.style.position = "";
-          panel.style.top = "";
-          panel.style.left = "";
-          panel.style.width = "";
-          if (useGsap)
-            gsap.set(panel, { xPercent: 0, clearProps: "transform" });
-        }
-      }
-    });
+  const makeActive = (index, focus = false) => {
+    if (index === activeIndex) return;
 
     const previousIndex = activeIndex;
 
@@ -250,7 +189,7 @@ function initComponent(tabWrap, componentIndex) {
         buttonWraps[i].classList.toggle("is-active", isActive);
       btn.setAttribute("aria-selected", isActive ? "true" : "false");
       btn.setAttribute("tabindex", isActive ? "0" : "-1");
-      if (accordionTimelines[i]) {
+      if (accordionContents[i]) {
         btn.setAttribute("aria-expanded", isActive ? "true" : "false");
       }
     };
@@ -262,7 +201,7 @@ function initComponent(tabWrap, componentIndex) {
       panelItems.forEach((panel, i) =>
         panel.classList.toggle("is-active", i === index),
       );
-    } else if (previousIndex !== index) {
+    } else {
       setButtonActive(previousIndex, false);
       setButtonActive(index, true);
       panelItems[previousIndex]?.classList.toggle("is-active", false);
@@ -276,78 +215,24 @@ function initComponent(tabWrap, componentIndex) {
 
     if (focus) buttonItems[index].focus();
 
-    // Drive accordion timelines (collapse previous, expand current)
-    if (
-      previousIndex !== -1 &&
-      accordionTimelines[previousIndex] &&
-      previousIndex !== index
-    ) {
-      if (animate) accordionTimelines[previousIndex].reverse();
-      else accordionTimelines[previousIndex].progress(0).pause();
+    // Toggle accordion-variant content visibility
+    if (previousIndex !== -1 && accordionContents[previousIndex]) {
+      /** @type {HTMLElement} */ (accordionContents[previousIndex]).style.display = "none";
     }
-    if (accordionTimelines[index]) {
-      if (animate) accordionTimelines[index].play();
-      else accordionTimelines[index].progress(1).pause();
+    if (accordionContents[index]) {
+      /** @type {HTMLElement} */ (accordionContents[index]).style.display = "block";
     }
 
-    // Panel transition
-    const previousPanel = panelItems[activeIndex];
-    const currentPanel = panelItems[index];
-    const direction = activeIndex > index ? -1 : 1;
-
-    if (useGsap && animate && activeIndex !== index) {
-      // Restart autoplay progress visual if it was waiting
-      if (
-        autoplayTl &&
-        !userPaused &&
-        typeof autoplayTl.restart === "function"
-      ) {
-        autoplayTl.restart();
-      }
-
-      currentTl = gsap.timeline({
-        onComplete: () => {
-          currentTl = null;
-          if (hasScrollTrigger())
-            /** @type {any} */ (window).ScrollTrigger.refresh();
-        },
-        defaults: { duration, ease: "power1.out" },
-      });
-
-      if (slideTabs) {
-        currentTl.set(currentPanel, { display: "block", position: "relative" });
-        if (previousPanel) {
-          currentTl.set(previousPanel, {
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-          });
-          currentTl.fromTo(
-            previousPanel,
-            { xPercent: 0 },
-            { xPercent: -120 * direction },
-          );
-        }
-        currentTl.fromTo(
-          currentPanel,
-          { xPercent: 120 * direction },
-          { xPercent: 0 },
-          "<",
-        );
-        if (previousPanel) currentTl.set(previousPanel, { display: "none" });
-      } else {
-        if (previousPanel) {
-          currentTl.to(previousPanel, { opacity: 0 });
-          currentTl.set(previousPanel, { display: "none" });
-        }
-        currentTl.set(currentPanel, { display: "block" });
-        currentTl.fromTo(currentPanel, { opacity: 0 }, { opacity: 1 });
-      }
-    } else {
-      if (previousPanel) previousPanel.style.display = "none";
-      if (currentPanel) currentPanel.style.display = "block";
+    // Swap panels — instant; any visible transition belongs in CSS
+    if (previousIndex !== -1 && panelItems[previousIndex]) {
+      panelItems[previousIndex].style.display = "none";
     }
+    if (panelItems[index]) panelItems[index].style.display = "block";
+
+    // Reset autoplay progress on user-driven changes — clicking a tab restarts
+    // the timer for the new tab. `userPaused` blocks the restart so a cycle
+    // the user has explicitly paused stays paused.
+    if (autoplayTl && !userPaused) autoplayTl.restart();
 
     // Scroll active button into view (only if button list is horizontally scrollable)
     if (buttonList.scrollWidth > buttonList.clientWidth) {
@@ -366,7 +251,6 @@ function initComponent(tabWrap, componentIndex) {
     makeActive(
       (activeIndex + delta + buttonItems.length) % buttonItems.length,
       focus,
-      true,
     );
 
   nextButton?.addEventListener("click", () => updateIndex(1));
@@ -422,22 +306,76 @@ function initComponent(tabWrap, componentIndex) {
   });
 
   // Activate first tab (or wait for deep-link microtask)
-  makeActive(0, false, false);
+  makeActive(0);
 
-  // ── Autoplay ──────────────────────────────────────────
-  if (autoplay !== 0 && hasGsap()) {
-    const gsap = /** @type {any} */ (window).gsap;
+  // ── Autoplay (rAF-driven; no external deps) ────────────
+  if (autoplay !== 0) {
+    const durationMs = autoplay * 1000;
+    let rafId = 0;
+    let cycleStart = 0; // performance.now() when current playing segment started
+    let elapsedBeforePause = 0; // ms accumulated from prior playing segments in this cycle
+    let isPlaying = false;
 
-    autoplayTl = gsap.timeline({ repeat: -1 }).fromTo(
-      tabWrap,
-      { "--progress": 0 },
-      {
-        "--progress": 1,
-        ease: "none",
-        duration: autoplay,
-        onComplete: () => updateIndex(1, false),
-      },
-    );
+    /** @param {number} p */
+    const setProgress = (p) => {
+      tabWrap.style.setProperty("--progress", String(p));
+    };
+
+    /** @param {number} now */
+    const tick = (now) => {
+      if (!isPlaying) return;
+      const elapsed = elapsedBeforePause + (now - cycleStart);
+      if (elapsed >= durationMs) {
+        setProgress(1);
+        isPlaying = false;
+        rafId = 0;
+        elapsedBeforePause = 0;
+        // Advance the tab; `makeActive` will call restart() if state allows.
+        updateIndex(1, false);
+        return;
+      }
+      setProgress(elapsed / durationMs);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const startCycle = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      elapsedBeforePause = 0;
+      cycleStart = performance.now();
+      isPlaying = true;
+      setProgress(0);
+      rafId = requestAnimationFrame(tick);
+    };
+
+    const pauseCycle = () => {
+      if (!isPlaying) return;
+      isPlaying = false;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      elapsedBeforePause += performance.now() - cycleStart;
+    };
+
+    const resumeCycle = () => {
+      if (isPlaying) return;
+      // If the previous cycle had already completed before pause, start fresh
+      if (elapsedBeforePause >= durationMs) {
+        startCycle();
+        return;
+      }
+      cycleStart = performance.now();
+      isPlaying = true;
+      rafId = requestAnimationFrame(tick);
+    };
+
+    autoplayTl = {
+      play: resumeCycle,
+      pause: pauseCycle,
+      restart: startCycle,
+    };
+
+    startCycle();
 
     let isHovered = false;
     let hasFocusInside = false;
@@ -452,9 +390,9 @@ function initComponent(tabWrap, componentIndex) {
         isHovered ||
         hasFocusInside
       ) {
-        autoplayTl.pause();
+        autoplayTl?.pause();
       } else {
-        autoplayTl.play();
+        autoplayTl?.play();
       }
     };
 

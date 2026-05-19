@@ -56,7 +56,6 @@ export function initAccordion() {
   document.querySelectorAll(A.list).forEach((listEl, listIndex) => {
     const list = /** @type {HTMLElement} */ (listEl);
     if (list.dataset.scriptInitialized) return;
-    list.dataset.scriptInitialized = "true";
 
     const closePrevious = attrBool(list, "data-close-previous", true);
     const closeOnSecondClick = attrBool(
@@ -78,6 +77,13 @@ export function initAccordion() {
     const items = [...list.querySelectorAll(A.item)].filter(
       (el) => el.closest(A.list) === list,
     );
+
+    // Don't mark the list initialized if it has no items yet. An `fs-list-nest`
+    // target is in the DOM at DOMContentLoaded but empty until Finsweet
+    // hydrates it — marking it now would make the re-init hook below skip the
+    // list once items finally arrive, leaving nested accordions unwired.
+    if (items.length === 0) return;
+    list.dataset.scriptInitialized = "true";
 
     items.forEach((item, itemIndex) => {
       // Same scope discipline for toggle/content so a nested list's elements
@@ -135,6 +141,18 @@ export function initAccordion() {
         anim.onfinish = () => {
           if (currentAnimation !== anim) return;
           currentAnimation = null;
+          // fill:forwards keeps the final keyframe applied at the animation
+          // layer after finish, which overrides inline style. That freezes the
+          // element at a fixed px height — invisible for leaf items but it
+          // blocks a parent from growing when a nested accordion opens inside
+          // it. Commit the final value to inline, then drop the animation
+          // effect, so onDone's `style.height = ""` actually reaches `auto`.
+          try {
+            anim.commitStyles();
+          } catch (_) {
+            /* commitStyles fails on detached elements — ignore */
+          }
+          anim.cancel();
           onDone();
         };
       };
@@ -203,6 +221,68 @@ export function initAccordion() {
     });
   });
 }
+
+// ── Finsweet integration ─────────────────────────────────────
+// Re-init accordions once Finsweet has populated CMS lists. Without this,
+// nested accordions hydrated via fs-list-nest never get wired — the outer
+// list is in the DOM at DOMContentLoaded, the inner ones aren't.
+
+/** @type {any} */ (window).FinsweetAttributes ||= [];
+/** @type {any} */ (window).FinsweetAttributes.push([
+  "list",
+  /** @param {Array<{loadingPromise?: Promise<unknown>}>} lists */
+  (lists) => {
+    Promise.all(lists.map((l) => l.loadingPromise || Promise.resolve())).then(
+      initAccordion,
+    );
+  },
+]);
+
+// ── MutationObserver: catch dynamic content from other sources ───
+// Handles cases where accordion lists appear via non-Finsweet means
+// (manual JS, Webflow CMS pagination, modal mounts, etc.). Debounced via
+// rAF to coalesce bulk DOM inserts. The init's `data-script-initialized`
+// guard already skips lists that are already wired.
+
+let mutationRafId = 0;
+let pendingMutations = false;
+
+const processMutations = () => {
+  mutationRafId = 0;
+  if (!pendingMutations) return;
+  pendingMutations = false;
+  initAccordion();
+};
+
+const scheduleMutationProcess = () => {
+  pendingMutations = true;
+  if (mutationRafId) return;
+  mutationRafId = requestAnimationFrame(processMutations);
+};
+
+const TRIGGER_SELECTOR = `${A.list}, ${A.item}`;
+
+const mutationObserver = new MutationObserver((mutations) => {
+  for (const m of mutations) {
+    for (const node of m.addedNodes) {
+      if (node.nodeType !== 1) continue;
+      const el = /** @type {Element} */ (node);
+
+      // Match items OR lists, on self OR descendants. Finsweet's `fs-list-nest`
+      // injects ITEMS into an already-existing list, so listening for new
+      // lists alone misses that case — and a `closest()` check would
+      // short-circuit on the outer already-initialized list.
+      const trigger =
+        el.matches?.(TRIGGER_SELECTOR) || el.querySelector?.(TRIGGER_SELECTOR);
+      if (trigger) {
+        scheduleMutationProcess();
+        return;
+      }
+    }
+  }
+});
+
+mutationObserver.observe(document.body, { childList: true, subtree: true });
 
 // ── Auto-boot ────────────────────────────────────────────────
 if (document.readyState === "loading") {
