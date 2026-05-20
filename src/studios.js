@@ -12,6 +12,7 @@
 // </script>
 
 import { requestUserLocation } from "./location.js";
+import { updateFilterCounts } from "./studios-filter-count.js";
 
 const FS_LIST_INSTANCE_KEY = "studios";
 
@@ -819,9 +820,16 @@ function setupStudiosInstance(fsListInstance) {
     // has no coords (or city.js hasn't booted yet), the fit-to-all view we
     // just applied stays in place — the city.onChange subscription below
     // will re-fly the map once the city activates.
+    //
+    // Exception: when a `?city=…` URL filter is active, the studios
+    // list is already pre-filtered to that selection — the fitToFeatures
+    // call above frames it correctly. Skip flyToCity in that case so the
+    // visitor's saved city doesn't yank the camera off the URL-filtered set.
     if (!initialRenderDone) {
       initialRenderDone = true;
-      flyToCity();
+      const urlCities =
+        /** @type {any} */ (window).bruce?.city?.urlSelection?.() ?? [];
+      if (urlCities.length === 0) flyToCity();
     }
   }
 
@@ -916,6 +924,7 @@ function setupStudiosInstance(fsListInstance) {
     // before any early return so map-driven and in-progress-load renders
     // still keep the count in sync.
     updateCountDisplay(component, filteredItems.length);
+    refreshSearchbarCounts();
     if (mapPanTriggered) {
       mapPanTriggered = false;
       setState("ready");
@@ -929,6 +938,115 @@ function setupStudiosInstance(fsListInstance) {
     setState("ready");
     return items;
   });
+}
+
+// ── Searchbar filter counts ──────────────────────────────────
+// The Finsweet filters form holds every filter input on this page. Reflect its
+// active-filter count badges via the shared util (which dedupes the duplicated
+// modal/nav/toolbar copies of each option). The `afterRender` hook above drives
+// every refresh — user toggles re-render, and so do Finsweet's programmatic
+// changes (URL restore on load, "Reset all", chip removal) — so no separate
+// `change` listener is needed. A baseline runs at boot, and submit is blocked so
+// Enter in the search field doesn't reload the page out from under Finsweet.
+// (Off the search page, `studios-search-redirect.js` owns its own form.)
+const SEARCH_FORM_SELECTOR = 'form[fs-list-element="filters"]';
+
+function refreshSearchbarCounts() {
+  document
+    .querySelectorAll(SEARCH_FORM_SELECTOR)
+    .forEach((form) =>
+      updateFilterCounts(/** @type {HTMLFormElement} */ (form)),
+    );
+}
+
+function setupSearchbarForms() {
+  document.querySelectorAll(SEARCH_FORM_SELECTOR).forEach((el) => {
+    const form = /** @type {HTMLFormElement} */ (el);
+    if (form.dataset.searchFiltersInit) return;
+    form.dataset.searchFiltersInit = "true";
+    form.addEventListener("submit", (event) => event.preventDefault());
+    updateFilterCounts(form);
+  });
+}
+
+// ── Apply inbound deep-link filters ──────────────────────────
+// Pages elsewhere link in with clean params (studios-search-redirect.js):
+// `/s?q=boxing&city=Stockholm&category=Pilates`. We replay each as exactly ONE
+// real checkbox click and let Finsweet own all state from there.
+//
+// Why one click and nothing else: the filter form renders each option as 3
+// duplicate copies (modal / nav / toolbar) that Finsweet does NOT keep in
+// sync (a real click checks only the clicked copy), and `fs-list-debounce=200`
+// makes it re-read the DOM after a delay. Any approach that ends up with more
+// than one checked copy — faking `.checked`, or the `filters` model API which
+// reflects into all 3 copies — gets re-read as the value N times ("BLACK |
+// BLACK | BLACK") and breaks toggling. One genuine click matches native
+// behaviour exactly: one tag (it's an `interacted` event), one condition,
+// clean toggle. Prefer the copy in the visible toolbar dropdowns
+// (`[data-search-group]`, where the count badges live) so the selection shows
+// where the user actually looks. Runs once.
+//
+// NOTE: because Finsweet never syncs the 3 duplicate UIs, only the toolbar
+// dropdown reflects the selection — the modal/nav copies stay blank, exactly
+// as they would for a manual click. Fully syncing them needs the duplicate
+// filter UIs collapsed into one instance (a markup change), not more JS.
+let urlFiltersApplied = false;
+function applyUrlDeepLinkFilters() {
+  if (urlFiltersApplied) return;
+  const form = document.querySelector(SEARCH_FORM_SELECTOR);
+  if (!form) return;
+
+  const params = new URLSearchParams(location.search);
+
+  // fieldKey → set of values (repeated keys = multi-select within a field).
+  const byField = new Map();
+  for (const [key, value] of params) {
+    if (key === "q") continue;
+    const set = byField.get(key) ?? new Set();
+    set.add(value);
+    byField.set(key, set);
+  }
+
+  const query = (params.get("q") ?? "").trim();
+  if (byField.size === 0 && !query) return;
+  urlFiltersApplied = true;
+
+  requestAnimationFrame(() => {
+    const inputs = /** @type {HTMLInputElement[]} */ ([
+      ...form.querySelectorAll("input[fs-list-field][fs-list-value]"),
+    ]);
+    for (const [fieldKey, values] of byField) {
+      for (const value of values) {
+        const copies = inputs.filter(
+          (el) =>
+            el.getAttribute("fs-list-field") === fieldKey &&
+            el.getAttribute("fs-list-value") === value,
+        );
+        const target =
+          copies.find((el) => el.closest("[data-search-group]")) ?? copies[0];
+        if (target && !target.checked) target.click();
+      }
+    }
+
+    // Free-text query → the search input, which Finsweet watches for `input`.
+    if (query) {
+      const search = /** @type {HTMLInputElement | null} */ (
+        form.querySelector('input[name="q"]')
+      );
+      if (search) {
+        search.value = query;
+        search.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+  });
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", setupSearchbarForms, {
+    once: true,
+  });
+} else {
+  setupSearchbarForms();
 }
 
 window.FinsweetAttributes ||= [];
@@ -954,5 +1072,9 @@ window.FinsweetAttributes.push([
       initializedInstances.add(instance);
       setupStudiosInstance(instance);
     });
+
+    // Hooks are wired now, so applying inbound deep-link filters re-renders
+    // through them (map + count badges follow).
+    applyUrlDeepLinkFilters();
   },
 ]);

@@ -100,8 +100,6 @@ function loadCities() {
       const lng = parseFloat(vars.lng);
       const coords = isNaN(lat) || isNaN(lng) ? null : [lng, lat];
 
-      console.log(vars);
-
       next.push({
         slug,
         name: el.getAttribute("data-city-name") ?? "",
@@ -119,9 +117,73 @@ function loadCities() {
 }
 
 // ── Pick the initial city ────────────────────────────────────
-// Priority: persisted choice → page-level override → CMS default → first city.
+// Priority: URL param → persisted choice → page-level override → CMS default → first city.
+
+// URL param wins over the persisted choice so a `?city=<name>` deep link lands
+// the map on that city instead of the visitor's saved city. Transient: not
+// written back to localStorage. Match is permissive: trim + case-insensitive on
+// slug AND name, so editor whitespace in CMS fields and varying URL casing
+// don't break the lookup. Every match is returned so studios.js can fit the
+// camera to all of them.
+//
+// Primary format is the clean param from studios-search-redirect.js — repeated
+// `city=` keys (`?city=Bergen&city=Oslo`). Falls back to the legacy Finsweet
+// `city_equal` (JSON array `["a","b"]` or comma-separated) for older links.
+function parseFilterValues(raw) {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const arr = JSON.parse(trimmed);
+      if (Array.isArray(arr)) return arr.map(String);
+    } catch {
+      // Malformed JSON — fall through to comma-split below.
+    }
+  }
+  return trimmed.split(",");
+}
+
+function citiesFromUrl() {
+  const sp = new URLSearchParams(location.search);
+  let raw = sp.getAll("city");
+  if (raw.length === 0) {
+    const legacy = sp.get("city_equal");
+    if (legacy) raw = parseFilterValues(legacy);
+  }
+  const values = raw.map((s) => s.trim().toLowerCase()).filter(Boolean);
+  if (values.length === 0) return [];
+
+  const matched = [];
+  const missed = [];
+  for (const value of values) {
+    const match = cities.find(
+      (c) =>
+        c.slug.trim().toLowerCase() === value ||
+        c.name.trim().toLowerCase() === value,
+    );
+    if (match) matched.push(match);
+    else missed.push(value);
+  }
+
+  if (missed.length) {
+    console.warn(
+      `[bruce.city] URL city filter — these values matched no city:`,
+      missed,
+      "Known cities:",
+      cities.map((c) => ({ slug: c.slug, name: c.name })),
+    );
+  }
+
+  return matched;
+}
+
+function cityFromUrl() {
+  return citiesFromUrl()[0]?.slug ?? null;
+}
 
 function getInitialCity() {
+  const fromUrl = cityFromUrl();
+  if (fromUrl) return fromUrl;
+
   let stored = null;
   try {
     stored = localStorage.getItem(STORAGE_KEY);
@@ -219,6 +281,13 @@ const api = {
   },
   all() {
     return cities.map((c) => ({ ...c, vars: { ...c.vars } }));
+  },
+  // Cities matched by the `?city_equal=<a>,<b>` URL param, in URL order.
+  // Empty when the param is absent or matches nothing. studios.js reads this
+  // to fit the map camera to the URL-filtered set instead of overriding it
+  // back to the visitor's saved city.
+  urlSelection() {
+    return citiesFromUrl().map((c) => ({ ...c, vars: { ...c.vars } }));
   },
   /** @param {(slug: string) => void} fn */
   onChange(fn) {

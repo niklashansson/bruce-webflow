@@ -7,6 +7,7 @@ import "./dropdown.js";
 import "./variables.js";
 import "./city.js";
 import "./location.js";
+import "./studios-search-redirect.js";
 import "./slider.js";
 import "./tab.js";
 import "./visual-video.js";
