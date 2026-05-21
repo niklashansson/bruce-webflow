@@ -127,8 +127,7 @@ function loadCities() {
 // camera to all of them.
 //
 // Primary format is the clean param from studios-search-redirect.js — repeated
-// `city=` keys (`?city=Bergen&city=Oslo`). Falls back to the legacy Finsweet
-// `city_equal` (JSON array `["a","b"]` or comma-separated) for older links.
+// `city=` keys (`?city=Bergen&city=Oslo`).
 function parseFilterValues(raw) {
   const trimmed = raw.trim();
   if (trimmed.startsWith("[")) {
@@ -145,10 +144,6 @@ function parseFilterValues(raw) {
 function citiesFromUrl() {
   const sp = new URLSearchParams(location.search);
   let raw = sp.getAll("city");
-  if (raw.length === 0) {
-    const legacy = sp.get("city_equal");
-    if (legacy) raw = parseFilterValues(legacy);
-  }
   const values = raw.map((s) => s.trim().toLowerCase()).filter(Boolean);
   if (values.length === 0) return [];
 
@@ -282,7 +277,7 @@ const api = {
   all() {
     return cities.map((c) => ({ ...c, vars: { ...c.vars } }));
   },
-  // Cities matched by the `?city_equal=<a>,<b>` URL param, in URL order.
+  // Cities matched by the `?city=<a>,<b>` URL param, in URL order.
   // Empty when the param is absent or matches nothing. studios.js reads this
   // to fit the map camera to the URL-filtered set instead of overriding it
   // back to the visitor's saved city.

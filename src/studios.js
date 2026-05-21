@@ -2,10 +2,11 @@
 // reacting to filter / sort / load changes. Clusters items client-side with
 // supercluster so each point + cluster stays as a DOM-based HTML marker.
 //
-// Requires mapbox-gl + supercluster loaded via CDN in the Webflow site <head>:
-// <link href="https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.css" rel="stylesheet">
-// <script src="https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.js"></script>
-// <script src="https://unpkg.com/supercluster@8.0.0/dist/supercluster.min.js"></script>
+// Mapbox GL + supercluster are loaded LAZILY by this module (see
+// loadMapboxLibs) the first time the map scrolls into view — they must NOT be
+// added as blocking <script> tags in the Webflow <head>, or the 460 KB +
+// ~25 s of eval lands back on the critical path and the lazy-load is moot.
+// Only the bottom-sheet web component still needs registering up front:
 // <script type="module">
 //import { registerSheetElements } from "https://cdn.jsdelivr.net/npm/pure-web-bottom-sheet@0.6.0/dist/web.client.js";
 // registerSheetElements();
@@ -13,12 +14,25 @@
 
 import { requestUserLocation } from "./location.js";
 import { updateFilterCounts } from "./studios-filter-count.js";
+import {
+  shouldApplyDeepLinkFilters,
+  pickDeepLinkClickIndex,
+} from "./studios-deep-link.js";
 
 const FS_LIST_INSTANCE_KEY = "studios";
 
 const MAPBOX_ACCESS_TOKEN =
   "pk.eyJ1IjoibmlrbGFzaGFuc3NvbiIsImEiOiJjbWxleHI0MngxaHU3M2dzOWZrMXJpMjJlIn0.yvXc8nLFEuUocjlwqNZiJQ";
 const MAPBOX_STYLE = "mapbox://styles/niklashansson/cmlextxil004n01r3d9gq7uzj";
+
+// Lazy-loaded CDN deps. Kept out of the Webflow <head> so they don't block
+// first paint; loaded on demand when the map is first revealed.
+const MAPBOX_JS_URL =
+  "https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.js";
+const MAPBOX_CSS_URL =
+  "https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.css";
+const SUPERCLUSTER_JS_URL =
+  "https://unpkg.com/supercluster@8.0.0/dist/supercluster.min.js";
 
 const DEFAULT_CENTER = [18.0686, 59.3293]; // Stockholm
 // Zoom levels above ~5 put globe projection past its flat-transition point,
@@ -83,6 +97,78 @@ const S = {
 
 let mapboxgl = null;
 const initializedInstances = new WeakSet();
+
+// Inject a <script> once and resolve when it has executed. Idempotent across
+// instances and re-entrant calls (multiple maps share one load).
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) {
+      if (existing.dataset.loaded === "true") return resolve();
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", reject, { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.addEventListener(
+      "load",
+      () => {
+        script.dataset.loaded = "true";
+        resolve();
+      },
+      { once: true },
+    );
+    script.addEventListener("error", reject, { once: true });
+    document.head.appendChild(script);
+  });
+}
+
+function loadStyleOnce(href) {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement("link");
+  link.rel = "stylesheet";
+  link.href = href;
+  document.head.appendChild(link);
+}
+
+// Loads mapbox-gl + supercluster on first call and caches the promise so every
+// studios instance awaits the same single load. Sets the module `mapboxgl`
+// reference and access token once ready.
+let mapboxLibsPromise = null;
+function loadMapboxLibs() {
+  if (mapboxLibsPromise) return mapboxLibsPromise;
+  mapboxLibsPromise = (async () => {
+    loadStyleOnce(MAPBOX_CSS_URL);
+    await Promise.all([
+      window.mapboxgl
+        ? Promise.resolve()
+        : loadScriptOnce(MAPBOX_JS_URL),
+      window.Supercluster
+        ? Promise.resolve()
+        : loadScriptOnce(SUPERCLUSTER_JS_URL),
+    ]);
+    mapboxgl = window.mapboxgl;
+    if (!mapboxgl) {
+      throw new Error(
+        "[studios-map] mapbox-gl failed to load from the CDN.",
+      );
+    }
+    mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+  })();
+  return mapboxLibsPromise;
+}
+
+// Defer non-urgent work to idle time (keeps the heavy Mapbox eval out of the
+// post-FCP TBT window), falling back to a short timeout where unsupported.
+function whenIdle(cb) {
+  if (typeof requestIdleCallback === "function") {
+    requestIdleCallback(cb, { timeout: 2000 });
+  } else {
+    setTimeout(cb, 200);
+  }
+}
 
 function getResponsiveZoom() {
   return window.innerWidth <= ZOOM_CONFIG.breakpoint
@@ -491,8 +577,17 @@ function setupStudiosInstance(fsListInstance) {
     }, FILTERING_DELAY_MS);
   }
 
-  const locateButtonEl = component.querySelector(S.locateButton);
-  const searchAreaButtonEl = component.querySelector(S.searchAreaButton);
+  // Duplicate locate / search-area buttons are expected: the desktop sidebar
+  // and the mobile sheet each carry their own copy, and they live outside the
+  // single `content` subtree that setupResponsiveContent moves, so both stay
+  // in the DOM at once. Bind every copy and keep their state in sync so the
+  // visible one always reflects reality regardless of layout.
+  const locateButtonEls = /** @type {HTMLElement[]} */ ([
+    ...component.querySelectorAll(S.locateButton),
+  ]);
+  const searchAreaButtonEls = /** @type {HTMLElement[]} */ ([
+    ...component.querySelectorAll(S.searchAreaButton),
+  ]);
   const userLocationTemplateEl = component.querySelector(
     S.userLocationTemplate,
   );
@@ -504,17 +599,24 @@ function setupStudiosInstance(fsListInstance) {
     return;
   }
 
-  // Dirty flag on the search-area button — `.is-active` matches the
-  // site-wide Finsweet convention (`fs-list-activeclass`).
+  // Dirty flag on the search-area buttons — `.is-active` matches the
+  // site-wide Finsweet convention (`fs-list-activeclass`). Toggled across all
+  // copies so every duplicate shows the same dirty state.
   let searchAreaDirty = false;
   const setSearchAreaDirty = (dirty) => {
-    if (!searchAreaButtonEl || dirty === searchAreaDirty) return;
+    if (dirty === searchAreaDirty) return;
     searchAreaDirty = dirty;
-    searchAreaButtonEl.classList.toggle("is-active", dirty);
+    searchAreaButtonEls.forEach((el) =>
+      el.classList.toggle("is-active", dirty),
+    );
   };
 
-  const map = createMap(mapTargetEl);
-  map.addControl(new mapboxgl.AttributionControl({ compact: true }));
+  // Map is created lazily (see ensureMap, wired up after the hooks below) the
+  // first time the map scrolls into view, so mapbox-gl's bytes + eval stay off
+  // the initial critical path. Until then `map` is null and every map-touching
+  // path is gated by `isLoaded` (false until `map.on("load")`), so the list,
+  // filters, counts and card paint all work with no map present.
+  let map = null;
 
   setupResponsiveContent(component);
   // Sheet coverage is read fresh on each explicit camera op (fit, locate,
@@ -545,13 +647,21 @@ function setupStudiosInstance(fsListInstance) {
   // Signature of the last rendered feature set; used to no-op render() when
   // the same items come through (e.g., pagination click, unchanged filter).
   let lastRenderSignature = null;
-  // CMS Load streams pages in; defer rendering until all pages are in so we
-  // rebuild supercluster once with the full dataset instead of per-page.
+  // CMS Load streams pages in. We render markers from whatever's loaded so far
+  // (markers fill in as pages arrive) rather than blocking on the full set —
+  // the visible cards and the map both show early. `finalizingCmsLoad` marks
+  // the single re-render fired once all pages are in, so afterRender knows not
+  // to refit the camera for it (a "data finished loading" event isn't a user
+  // intent to move the view).
   const pendingCmsLoad = fsListInstance.loadingPaginatedItems;
   let cmsLoadDone = !pendingCmsLoad;
+  let finalizingCmsLoad = false;
   pendingCmsLoad?.finally(() => {
     cmsLoadDone = true;
-    if (!mapPanTriggered) fsListInstance.triggerHook("filter");
+    if (!mapPanTriggered) {
+      finalizingCmsLoad = true;
+      fsListInstance.triggerHook("filter");
+    }
   });
 
   let userLocationMarker = null;
@@ -799,7 +909,11 @@ function setupStudiosInstance(fsListInstance) {
     });
   }
 
-  function render(features) {
+  // `fit` controls whether the camera reframes to the feature set. We fit on
+  // the initial render (always — frames the first markers) and on user-driven
+  // filter changes, but NOT while CMS pages are still streaming in, so the
+  // camera doesn't lurch on every page that lands.
+  function render(features, { fit = true } = {}) {
     if (!isLoaded) {
       queuedFeatures = features;
       return;
@@ -813,7 +927,7 @@ function setupStudiosInstance(fsListInstance) {
       closePopup();
       rebuildIndex(features);
       renderClusters();
-      fitToFeatures(map, features, sheetCoverage());
+      if (fit || !initialRenderDone) fitToFeatures(map, features, sheetCoverage());
     }
 
     // First successful render: fly to the selected city. If the active city
@@ -833,27 +947,54 @@ function setupStudiosInstance(fsListInstance) {
     }
   }
 
-  map.on("load", () => {
-    isLoaded = true;
-    if (queuedFeatures !== null) {
-      const features = queuedFeatures;
-      queuedFeatures = null;
-      render(features);
-    }
-  });
+  // Lazily build the map: load the CDN libs, create the map, wire its events,
+  // then flush whatever features have queued up while it was absent. Runs at
+  // most once per instance; safe to call from the observer or any handler.
+  let mapInitStarted = false;
+  function ensureMap() {
+    if (mapInitStarted) return;
+    mapInitStarted = true;
+    loadMapboxLibs()
+      .then(() => {
+        map = createMap(mapTargetEl);
+        map.addControl(new mapboxgl.AttributionControl({ compact: true }));
 
-  // Keep markers / clusters up to date as the user pans and zooms. This is
-  // purely visual — the list is NOT auto-refiltered to viewport. See the
-  // search-area button below for explicit bounds refilter.
-  //
-  // `originalEvent` is only present on USER-initiated moves (pan, pinch,
-  // wheel). Programmatic moves (flyTo, fitBounds) don't carry it — we only
-  // want to mark the button "dirty" when the user has actually moved the
-  // map, not when our code did.
-  map.on("moveend", (e) => {
-    renderClusters();
-    if (e.originalEvent) setSearchAreaDirty(true);
-  });
+        map.on("load", () => {
+          isLoaded = true;
+          if (queuedFeatures !== null) {
+            const features = queuedFeatures;
+            queuedFeatures = null;
+            render(features);
+          }
+        });
+
+        // Keep markers / clusters up to date as the user pans and zooms. This
+        // is purely visual — the list is NOT auto-refiltered to viewport. See
+        // the search-area button below for explicit bounds refilter.
+        //
+        // `originalEvent` is only present on USER-initiated moves (pan, pinch,
+        // wheel). Programmatic moves (flyTo, fitBounds) don't carry it — we
+        // only mark the button "dirty" when the user actually moved the map.
+        map.on("moveend", (e) => {
+          renderClusters();
+          if (e.originalEvent) setSearchAreaDirty(true);
+        });
+      })
+      .catch((err) => console.error(err));
+  }
+
+  // Build the map the first time its container nears the viewport. Deferring
+  // to idle keeps mapbox-gl's parse/eval out of the post-FCP TBT window. The
+  // 200px rootMargin warms it just before it's actually scrolled into view.
+  const mapObserver = new IntersectionObserver(
+    (entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      mapObserver.disconnect();
+      whenIdle(ensureMap);
+    },
+    { rootMargin: "200px" },
+  );
+  mapObserver.observe(mapTargetEl);
 
   // City switch → re-center the map. Gated on initialRenderDone so an
   // activation that lands between map.load and the first render doesn't
@@ -864,23 +1005,26 @@ function setupStudiosInstance(fsListInstance) {
     if (initialRenderDone) flyToCity();
   });
 
-  // Locate button → request a fresh location on each click (bypasses the
-  // module-level cache so repeat clicks re-prompt or refresh).
-  if (locateButtonEl) {
-    locateButtonEl.addEventListener("click", async () => {
-      locateButtonEl.dataset.state = "locating";
+  // Locate buttons → request a fresh location on each click (bypasses the
+  // module-level cache so repeat clicks re-prompt or refresh). `data-state` is
+  // mirrored across every copy so the desktop and mobile buttons agree.
+  const setLocateState = (state) =>
+    locateButtonEls.forEach((el) => (el.dataset.state = state));
+  locateButtonEls.forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      setLocateState("locating");
       const loc = await requestUserLocation();
-      locateButtonEl.dataset.state = loc ? "success" : "error";
+      setLocateState(loc ? "success" : "error");
       if (loc) showUserLocation(loc);
     });
-  }
+  });
 
-  // Search-this-area button → explicit bounds refilter. The list ONLY narrows
+  // Search-this-area buttons → explicit bounds refilter. The list ONLY narrows
   // to the visible map area when the user presses this. Pan/zoom alone don't
   // change the list — matches the Airbnb/Booking pattern and avoids the
   // "my list keeps jumping" surprise.
-  if (searchAreaButtonEl) {
-    searchAreaButtonEl.addEventListener("click", () => {
+  searchAreaButtonEls.forEach((btn) => {
+    btn.addEventListener("click", () => {
       if (!isLoaded) return;
       // `mapPanTriggered` doubles here as "this filter pass was triggered by
       // the map, not by a user filter/category change". The filter hook uses
@@ -889,10 +1033,10 @@ function setupStudiosInstance(fsListInstance) {
       // which items the list shows).
       mapPanTriggered = true;
       fsListInstance.triggerHook("filter");
-      // List now reflects the current map view → clean state, button hides.
+      // List now reflects the current map view → clean state, buttons hide.
       setSearchAreaDirty(false);
     });
-  }
+  });
 
   // Bounds-filters items when moveend triggered this pass; otherwise passes
   // through. Captures the output as `filteredItems` — afterRender receives the
@@ -925,17 +1069,24 @@ function setupStudiosInstance(fsListInstance) {
     // still keep the count in sync.
     updateCountDisplay(component, filteredItems.length);
     refreshSearchbarCounts();
+    // Reveal the (server-rendered, already-in-DOM) cards on the first render
+    // instead of waiting for the full 44-page CMS stream + map init. This is
+    // the main LCP win: the visible list no longer hides behind background
+    // loading. `render()` self-queues until the map exists, so calling it here
+    // before the map is built is safe.
+    setState("ready");
     if (mapPanTriggered) {
       mapPanTriggered = false;
-      setState("ready");
       return items;
     }
-    // Per-page CMS-load renders run through here while items are still
-    // streaming in — keep the loading state until pendingCmsLoad resolves
-    // and re-triggers the filter pass below.
-    if (!cmsLoadDone) return items;
-    render(extractFeatures(filteredItems.map((i) => i.element)));
-    setState("ready");
+    // Render markers from the items loaded so far so the map fills in as pages
+    // stream. Fit the camera only once fully loaded AND on a real user filter
+    // change — never on a streaming page or on the load-finished re-render
+    // (finalizingCmsLoad), so the view stays put while data arrives.
+    render(extractFeatures(filteredItems.map((i) => i.element)), {
+      fit: cmsLoadDone && initialRenderDone && !finalizingCmsLoad,
+    });
+    finalizingCmsLoad = false;
     return items;
   });
 }
@@ -965,6 +1116,12 @@ function setupSearchbarForms() {
     if (form.dataset.searchFiltersInit) return;
     form.dataset.searchFiltersInit = "true";
     form.addEventListener("submit", (event) => event.preventDefault());
+    // Reflect filter state instantly on interaction, ahead of Finsweet's
+    // 200ms-debounced afterRender. afterRender stays the authoritative refresh
+    // for programmatic changes (URL restore on load, "Reset all", chip
+    // removal); this just removes the felt lag on a direct user toggle.
+    // updateFilterCounts is pure + idempotent, so the double-run is harmless.
+    form.addEventListener("change", () => updateFilterCounts(form));
     updateFilterCounts(form);
   });
 }
@@ -990,9 +1147,26 @@ function setupSearchbarForms() {
 // dropdown reflects the selection — the modal/nav copies stay blank, exactly
 // as they would for a manual click. Fully syncing them needs the duplicate
 // filter UIs collapsed into one instance (a markup change), not more JS.
+
+// PerformanceNavigationTiming.type for this page load, or "navigate" where the
+// API is unavailable (treated as a fresh inbound visit → safe to replay).
+function getNavigationType() {
+  const nav = performance.getEntriesByType?.("navigation")?.[0];
+  return /** @type {any} */ (nav)?.type ?? "navigate";
+}
+
 let urlFiltersApplied = false;
 function applyUrlDeepLinkFilters() {
   if (urlFiltersApplied) return;
+  // On back/forward Finsweet restores its own filter state from the URL it
+  // took over — replaying our params on top double-checks the duplicate
+  // copies and desyncs the model (see studios-deep-link.js). Leave it to FS,
+  // and seal the gate so this decision isn't re-evaluated on every later
+  // Finsweet callback for the rest of the page's life.
+  if (!shouldApplyDeepLinkFilters(getNavigationType())) {
+    urlFiltersApplied = true;
+    return;
+  }
   const form = document.querySelector(SEARCH_FORM_SELECTOR);
   if (!form) return;
 
@@ -1022,9 +1196,16 @@ function applyUrlDeepLinkFilters() {
             el.getAttribute("fs-list-field") === fieldKey &&
             el.getAttribute("fs-list-value") === value,
         );
-        const target =
-          copies.find((el) => el.closest("[data-search-group]")) ?? copies[0];
-        if (target && !target.checked) target.click();
+        // Skip the click if ANY copy is already checked — clicking a second
+        // copy registers the value twice and breaks toggling. Inspect every
+        // copy, not just the toolbar one, since the copies are never synced.
+        const idx = pickDeepLinkClickIndex(
+          copies.map((el) => ({
+            checked: el.checked,
+            inSearchGroup: !!el.closest("[data-search-group]"),
+          })),
+        );
+        if (idx !== -1) copies[idx].click();
       }
     }
 
@@ -1058,15 +1239,8 @@ window.FinsweetAttributes.push([
     );
     if (studioInstances.length === 0) return;
 
-    if (!window.mapboxgl) {
-      console.warn(
-        "[studios-map] mapbox-gl not found on window. Add the CDN script to the Webflow <head>.",
-      );
-      return;
-    }
-    mapboxgl = window.mapboxgl;
-    mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
-
+    // mapbox-gl is loaded lazily per instance (see loadMapboxLibs) the first
+    // time the map scrolls into view — nothing to await here.
     studioInstances.forEach((instance) => {
       if (initializedInstances.has(instance)) return;
       initializedInstances.add(instance);
