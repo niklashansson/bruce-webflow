@@ -24,6 +24,7 @@ import {
   loadScriptOnce,
   whenIdle,
 } from "./mapbox.js";
+import "./studios-city-filter.js";
 
 const FS_LIST_INSTANCE_KEY = "studios";
 
