@@ -76,7 +76,7 @@ new and inline, built as a standard `dropdown.js` wrap:
     <div data-dropdown-element="content">
       <button data-studios-city-option="all">All cities</button>
       <!-- CMS Collection List of cities → one button per item: -->
-      <button data-studios-city-option data-set-city="{slug}">{name}</button>
+      <button data-studios-city-option="{slug}">{name}</button>
     </div>
   </span>
 </h1>
@@ -84,11 +84,18 @@ new and inline, built as a standard `dropdown.js` wrap:
 
 - Open/close, click-outside, Escape, and arrow-key nav are handled by the
   existing `dropdown.js` (no new menu code).
-- Concrete options reuse the existing `data-set-city` switcher infra in
-  `city.js` (delegated click handler + `data-city-active="true"` styling) — free
-  active-state styling and keyboard support.
-- `[data-studios-city-option="all"]` is the only new trigger type.
-- `[data-studios-city-label]` holds the trigger text, written by the new module
+- Every option carries `data-studios-city-option` — `"all"` for the all-cities
+  trigger, or the city `{slug}` for a concrete city. The picker is
+  **self-contained**: its own delegated click handler reads that attribute and
+  drives both context (`bruce.city.set`) and the filter, rather than depending
+  on `city.js`'s `data-set-city` delegation. This keeps the heading's state =
+  the *filter* selection, decoupled from context changes elsewhere (see the
+  module section for why this matters).
+- Active option styling uses `data-studios-city-active="true"`, set by the
+  module on the option matching the current filter selection (or the "all"
+  option). Styled independently of `city.js`'s context-driven
+  `data-city-active`.
+- `[data-studios-city-label]` holds the trigger text, written by the module
   from the **filter** selection — *not* `{{city-name}}`, which tracks context
   and would read wrong ("…in Stockholm" while showing all cities).
 
@@ -99,7 +106,7 @@ form (`form[fs-list-element="filters"]`):
 
 ```html
 <div data-studios-city-filter hidden>
-  <label><input type="checkbox" fs-list-field="city_equal" fs-list-value="{city name}"></label>
+  <label><input type="checkbox" fs-list-field="city" fs-list-value="{city name}"></label>
   <!-- one per city -->
 </div>
 ```
@@ -119,24 +126,30 @@ surface is small; it coordinates `window.bruce.city`, the filters form, and the
 heading DOM.
 
 - **`applyCitySelection(slug | "all")`** — idempotent entry point.
-  - concrete slug → `bruce.city.set(slug)` + `syncHiddenFilter(slug)` + label.
-  - `"all"` → `syncHiddenFilter(null)` + label `"All cities"` (context untouched).
+  - concrete slug → `bruce.city.set(slug)` (context) + `syncHiddenFilter(slug)` + label + active.
+  - `"all"` → `syncHiddenFilter(null)` + label `"All cities"` + active (context untouched).
 - **`syncHiddenFilter(slug | null)`** — the desync-safe bridge. Reads which
   hidden city input is currently checked; if it differs from the target, fires
   one genuine `.click()` to uncheck the old and one to check the new (the same
   "interacted event" rule the deep-link replay uses, so Finsweet's debounce and
   internal model stay consistent and we never end up with two checked copies).
-  One-way only — hidden inputs carry no `data-set-city`, so there is no loop.
-- **Option clicks:** `[data-studios-city-option="all"]` → `applyCitySelection("all")`.
-  Concrete options already flow through `city.js`'s `data-set-city` handler; we
-  mirror them by subscribing to `bruce.city.onChange` → `applyCitySelection(slug)`.
-  Idempotent guards stop the set → onChange → set loop. Net effect: a city
-  switch from *anywhere* on the page also narrows the search, consistently.
-- **Initial engagement** (strong-signal rule):
-  - `?city=` present → engage filter for the first matched city.
+  Idempotent — no clicks when already on the target. One-way only (hidden inputs
+  carry no `data-studios-city-option`), so there is no loop.
+- **Option clicks:** one delegated `click` handler on the picker reads
+  `data-studios-city-option` and calls `applyCitySelection("all" | slug)`.
+  **No `bruce.city.onChange` subscription** — the heading deliberately reflects
+  the *filter*, not context. Reacting to `onChange` would make the initial
+  default-chain context resolution (which fires `null → defaultCity` at boot)
+  silently engage the filter, violating the strong-signal rule. So context
+  changes from elsewhere never touch the heading; the picker's own clicks are
+  the only thing that engages the filter post-load.
+- **Initial engagement** (strong-signal rule). Runs inside a
+  `FinsweetAttributes.push(["list", …])` callback so the hidden-input clicks land
+  *after* Finsweet has bound the list (clicking before binding would no-op,
+  exactly like the existing deep-link replay):
+  - `?city=` present (`bruce.city.urlSelection()[0]`) → engage filter for that city.
   - else geolocation already granted and resolves to a nearest city → engage
-    that city (and persist via `bruce.city.set`, only if it differs from the
-    default chain's pick, to avoid a needless recenter flash).
+    that city (`applyCitySelection` also persists it via `bruce.city.set`).
   - else → "All cities" (filter off); `city.js` still resolves the context city
     for map home + placeholders independently.
 
@@ -145,6 +158,19 @@ heading DOM.
   `requestUserLocation()` when state is `"granted"`. Nearest city = min great-
   circle distance over `bruce.city.all()` entries that have `coords`.
 
+  On **back/forward** navigation (the same `shouldApplyDeepLinkFilters` rule the
+  deep-link replay uses), Finsweet restores its own filter state — including the
+  hidden city input — from the URL it took over. So the picker must NOT re-click
+  there (that would double-check and desync). Instead it mirrors the URL city
+  into the heading label / active state / context without touching the inputs.
+  `syncHiddenFilter` is also idempotent against an already-checked target, as a
+  second line of defence.
+
+The pure decision helpers live in a separate framework-free module
+`src/studios-city-select.js` (mirroring `studios-deep-link.js`), so they unit-
+test without a DOM: `nearestCitySlug`, `resolveInitialCitySelection`, and
+`planCityFilterClicks`.
+
 ## Changes to existing files
 
 - **`studios.js` — camera:** the current "filters cleared → `flyToCity()`"
@@ -152,11 +178,16 @@ heading DOM.
   filter is explicitly OFF, **fit to all features** instead of flying to the
   context city. When a concrete city is engaged, the existing
   `onChange → flyToCity` + `fitToFeatures` already frame it correctly.
-- **`studios.js` — deep-link replay:** drop `city` from the generic
-  checkbox-clicking loop in `applyUrlDeepLinkFilters`. `city.js` already reads
-  `?city=` for context and the bridge engages the hidden filter from `onChange`,
-  so the `city` field is owned by the picker/bridge. The generic replay keeps
-  handling `category`, `q`, and any future fields.
+- **`studios.js` — deep-link replay:** skip the `city` field key in the generic
+  checkbox-clicking loop in `applyUrlDeepLinkFilters` (`if (key === "city") continue;`,
+  alongside the existing `q` skip). `city.js` already reads `?city=` for context
+  and the picker's boot engagement applies the hidden city filter, so the `city`
+  field is owned by the picker. The generic replay keeps handling `category`,
+  `q`, and any future fields.
+
+  The Finsweet field key for city is **`city`** (so `fs-list-field="city"`, URL
+  param `?city=`); `city_equal` in some comments is only a `data-search-group`
+  hook label, not the field key.
 - **`studios-filter-count.js`:** unchanged. The hidden city group is real
   `:checked` inputs, so `hasActiveFilters()` and Finsweet "Reset all" naturally
   include city.
