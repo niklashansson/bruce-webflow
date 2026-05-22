@@ -18,19 +18,18 @@ import {
   shouldApplyDeepLinkFilters,
   pickDeepLinkClickIndex,
 } from "./studios-deep-link.js";
+import {
+  MAPBOX_STYLE,
+  loadMapboxGl,
+  loadScriptOnce,
+  whenIdle,
+} from "./mapbox.js";
 
 const FS_LIST_INSTANCE_KEY = "studios";
 
-const MAPBOX_ACCESS_TOKEN =
-  "pk.eyJ1IjoibmlrbGFzaGFuc3NvbiIsImEiOiJjbWxleHI0MngxaHU3M2dzOWZrMXJpMjJlIn0.yvXc8nLFEuUocjlwqNZiJQ";
-const MAPBOX_STYLE = "mapbox://styles/niklashansson/cmlextxil004n01r3d9gq7uzj";
-
-// Lazy-loaded CDN deps. Kept out of the Webflow <head> so they don't block
-// first paint; loaded on demand when the map is first revealed.
-const MAPBOX_JS_URL =
-  "https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.js";
-const MAPBOX_CSS_URL =
-  "https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.css";
+// Supercluster is the list page's only extra CDN dep beyond mapbox-gl (loaded
+// lazily by ./mapbox.js); kept out of the Webflow <head> so it doesn't block
+// first paint and loaded on demand when the map is first revealed.
 const SUPERCLUSTER_JS_URL =
   "https://unpkg.com/supercluster@8.0.0/dist/supercluster.min.js";
 
@@ -98,76 +97,22 @@ const S = {
 let mapboxgl = null;
 const initializedInstances = new WeakSet();
 
-// Inject a <script> once and resolve when it has executed. Idempotent across
-// instances and re-entrant calls (multiple maps share one load).
-function loadScriptOnce(src) {
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector(`script[src="${src}"]`);
-    if (existing) {
-      if (existing.dataset.loaded === "true") return resolve();
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", reject, { once: true });
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = src;
-    script.async = true;
-    script.addEventListener(
-      "load",
-      () => {
-        script.dataset.loaded = "true";
-        resolve();
-      },
-      { once: true },
-    );
-    script.addEventListener("error", reject, { once: true });
-    document.head.appendChild(script);
-  });
-}
-
-function loadStyleOnce(href) {
-  if (document.querySelector(`link[href="${href}"]`)) return;
-  const link = document.createElement("link");
-  link.rel = "stylesheet";
-  link.href = href;
-  document.head.appendChild(link);
-}
-
-// Loads mapbox-gl + supercluster on first call and caches the promise so every
-// studios instance awaits the same single load. Sets the module `mapboxgl`
-// reference and access token once ready.
+// Loads mapbox-gl (via the shared ./mapbox.js loader) + supercluster on first
+// call and caches the promise so every studios instance awaits the same single
+// load. Sets the module `mapboxgl` reference once ready.
 let mapboxLibsPromise = null;
 function loadMapboxLibs() {
   if (mapboxLibsPromise) return mapboxLibsPromise;
   mapboxLibsPromise = (async () => {
-    loadStyleOnce(MAPBOX_CSS_URL);
-    await Promise.all([
-      window.mapboxgl
-        ? Promise.resolve()
-        : loadScriptOnce(MAPBOX_JS_URL),
+    const [gl] = await Promise.all([
+      loadMapboxGl(),
       window.Supercluster
         ? Promise.resolve()
         : loadScriptOnce(SUPERCLUSTER_JS_URL),
     ]);
-    mapboxgl = window.mapboxgl;
-    if (!mapboxgl) {
-      throw new Error(
-        "[studios-map] mapbox-gl failed to load from the CDN.",
-      );
-    }
-    mapboxgl.accessToken = MAPBOX_ACCESS_TOKEN;
+    mapboxgl = gl;
   })();
   return mapboxLibsPromise;
-}
-
-// Defer non-urgent work to idle time (keeps the heavy Mapbox eval out of the
-// post-FCP TBT window), falling back to a short timeout where unsupported.
-function whenIdle(cb) {
-  if (typeof requestIdleCallback === "function") {
-    requestIdleCallback(cb, { timeout: 2000 });
-  } else {
-    setTimeout(cb, 200);
-  }
 }
 
 function getResponsiveZoom() {
@@ -689,16 +634,19 @@ function setupStudiosInstance(fsListInstance) {
     });
   }
 
+  // Returns true when it actually started a fly-to, false when there's no map
+  // or no selected city coords — callers fall back to fit-to-features.
   function flyToCity() {
-    if (!isLoaded) return;
+    if (!isLoaded) return false;
     const loc = getSelectedCityCoords();
-    if (!loc) return;
+    if (!loc) return false;
     map.flyTo({
       center: loc,
       zoom: CITY_ZOOM,
       duration: FIT_BOUNDS_CONFIG.duration,
       padding: sheetPadding(),
     });
+    return true;
   }
 
   function clearMarkers() {
@@ -927,7 +875,18 @@ function setupStudiosInstance(fsListInstance) {
       closePopup();
       rebuildIndex(features);
       renderClusters();
-      if (fit || !initialRenderDone) fitToFeatures(map, features, sheetCoverage());
+      // On a user-driven refit (not the initial render) that lands on an empty
+      // filter state — i.e. the user just cleared all filters — return to the
+      // initial city view instead of zooming out to frame every studio. Falls
+      // back to fit-to-features when there's no selected city to fly to.
+      const returnedToCity =
+        fit &&
+        initialRenderDone &&
+        !hasActiveFilters() &&
+        flyToCity();
+      if (!returnedToCity && (fit || !initialRenderDone)) {
+        fitToFeatures(map, features, sheetCoverage());
+      }
     }
 
     // First successful render: fly to the selected city. If the active city
@@ -1108,6 +1067,26 @@ function refreshSearchbarCounts() {
     .forEach((form) =>
       updateFilterCounts(/** @type {HTMLFormElement} */ (form)),
     );
+}
+
+// True when any filter is currently engaged: a checked option in any group, or
+// a non-empty free-text query. Read straight from the form DOM (same source as
+// the count badges) so it reflects post-clear state when called from
+// afterRender. Used to send the camera home to the selected city when the user
+// clears everything rather than fitting the whole unfiltered set.
+function hasActiveFilters() {
+  for (const form of document.querySelectorAll(SEARCH_FORM_SELECTOR)) {
+    for (const el of form.querySelectorAll("input")) {
+      const input = /** @type {HTMLInputElement} */ (el);
+      if (!input.name) continue;
+      if (input.name === "q") {
+        if (input.value.trim()) return true;
+      } else if (input.checked) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 function setupSearchbarForms() {
