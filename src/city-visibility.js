@@ -6,9 +6,14 @@
  *
  * ── Required CSS (Webflow site-wide custom code, set up once) ─────
  *   .is-city-hidden { display: none !important; }
- *   body:not(.is-city-ready) [data-city-show]:not([data-city-show=""]) {
+ *   html:not(.wf-design-mode) body:not(.is-city-ready)
+ *     [data-city-show]:not([data-city-show=""]) {
  *     display: none;
  *   }
+ *
+ * The html:not(.wf-design-mode) prefix lets editors preview one city
+ * at a time in the Webflow Designer via the data-preview-city
+ * attribute — see specs/2026-05-27-preview-city-design.md.
  *
  * The !important defeats Webflow class-driven display:flex/grid/block
  * (same external-CSS precedence lesson as the bottom-sheet component).
