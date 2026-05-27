@@ -6,6 +6,7 @@ import "./collapsible.js";
 import "./dropdown.js";
 import "./variables.js";
 import "./city.js";
+import "./city-visibility.js";
 import "./location.js";
 import "./studios-search-redirect.js";
 import "./slider.js";
