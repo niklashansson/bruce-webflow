@@ -121,11 +121,11 @@ const observer = new MutationObserver((mutations) => {
 
 // ── Boot ─────────────────────────────────────────────────────
 // Subscribes to city.onChange, runs an initial sweep, then arms the
-// observer + safety-pass timers. Idempotent if re-invoked.
+// observer + safety-pass timers. Called at most once per page load.
 
 const boot = () => {
   const api = /** @type {any} */ (window).bruce?.city;
-  api?.onChange?.(() => scheduleSweep());
+  api?.onChange?.(() => sweep());
 
   sweep(); // may run with null slug → all data-city-show get is-city-hidden,
   // body.is-city-ready stays unset, pre-hide remains. onChange or a safety
