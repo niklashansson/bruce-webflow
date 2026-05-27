@@ -51,6 +51,10 @@
  *                                    coords is [lng, lat] if data-city-var-lat
  *                                    and data-city-var-lng are both set, else null.
  *   window.bruce.city.onChange(fn) → subscribe; returns unsubscribe
+ *
+ * ── Related ──────────────────────────────────────────────────
+ * `data-city-show="<slug-or-name>[,...]"` toggles element visibility
+ * based on the active city — see src/city-visibility.js.
  */
 
 import { setGlobal } from "./variables.js";
