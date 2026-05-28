@@ -1,2 +1,3967 @@
-!function(e,t,r,n,a){var i="u">typeof globalThis?globalThis:"u">typeof self?self:"u">typeof window?window:"u">typeof global?global:{},o="function"==typeof i[n]&&i[n],l=o.i||{},s=o.cache||{},c="u">typeof module&&"function"==typeof module.require&&module.require.bind(module);function d(t,r){if(!s[t]){if(!e[t]){if(a[t])return a[t];var l="function"==typeof i[n]&&i[n];if(!r&&l)return l(t,!0);if(o)return o(t,!0);if(c&&"string"==typeof t)return c(t);var u=Error("Cannot find module '"+t+"'");throw u.code="MODULE_NOT_FOUND",u}p.resolve=function(r){var n=e[t][1][r];return null!=n?n:r},p.cache={};var f=s[t]=new d.Module(t);e[t][0].call(f.exports,p,f,f.exports,i)}return s[t].exports;function p(e){var t=p.resolve(e);if(!1===t)return{};if(Array.isArray(t)){var r={__esModule:!0};return t.forEach(function(e){var t=e[0],n=e[1],a=e[2]||e[0],i=d(n);"*"===t?Object.keys(i).forEach(function(e){"default"===e||"__esModule"===e||Object.prototype.hasOwnProperty.call(r,e)||Object.defineProperty(r,e,{enumerable:!0,get:function(){return i[e]}})}):"*"===a?Object.defineProperty(r,t,{enumerable:!0,value:i}):Object.defineProperty(r,t,{enumerable:!0,get:function(){return"default"===a?i.__esModule?i.default:i:i[a]}})}),r}return d(t)}}d.isParcelRequire=!0,d.Module=function(e){this.id=e,this.bundle=d,this.require=c,this.exports={}},d.modules=e,d.cache=s,d.parent=o,d.distDir=void 0,d.publicUrl=void 0,d.devServer=void 0,d.i=l,d.register=function(t,r){e[t]=[function(e,t){t.exports=r},{}]},Object.defineProperty(d,"root",{get:function(){return i[n]}}),i[n]=d;for(var u=0;u<t.length;u++)d(t[u]);if(r){var f=d(r);"object"==typeof exports&&"u">typeof module?module.exports=f:"function"==typeof define&&define.amd&&define(function(){return f})}}({"8iFs3":[function(e,t,r,n){e("./nav.js"),e("./announcements.js"),e("./modal.js"),e("./accordion.js"),e("./collapsible.js"),e("./dropdown.js"),e("./variables.js"),e("./city.js"),e("./city-visibility.js"),e("./location.js"),e("./studios-search-redirect.js"),e("./slider.js"),e("./tab.js"),e("./visual-video.js")},{"./nav.js":"4aKPA","./announcements.js":"3QSo5","./modal.js":"1QC7W","./accordion.js":"AysVY","./collapsible.js":"l7e7g","./dropdown.js":"9XUdG","./variables.js":"7AES0","./city.js":"4nhAH","./city-visibility.js":"i1g0X","./location.js":"ULWap","./studios-search-redirect.js":"lFaBY","./slider.js":"1nMjd","./tab.js":"5aQpn","./visual-video.js":"17MEu"}],"4aKPA":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initNav",()=>o);var i=e("./utils.js");function o(){let e;(e=document.querySelector("main"))&&document.querySelectorAll(".nav_skip_wrap").forEach(t=>{t.dataset.scriptInitialized||(t.dataset.scriptInitialized="true",t.addEventListener("click",()=>{e.setAttribute("tabindex","-1"),e.focus(),e.addEventListener("blur",()=>e.removeAttribute("tabindex"),{once:!0})}))}),function(){let e=document.querySelectorAll(".nav_component[data-hide-on-scroll]");if(!e.length)return;let t=window.scrollY<=100;e.forEach(e=>{e.classList.add(t?"is-scroll-top":"is-scroll-down")});let r=[];if(e.forEach(e=>{e.dataset.scriptInitialized||(e.dataset.scriptInitialized="true",r.push({el:e,threshold:(0,i.attrNum)(e,"data-scroll-threshold",16),committed:+!t,pivotY:window.scrollY}))}),!r.length)return;let n=!1,a=()=>{n=!1;let e=window.scrollY;for(let t of r){if(e<=100){0!==t.committed&&(t.el.classList.remove("is-scroll-up","is-scroll-down"),t.el.classList.add("is-scroll-top"),t.committed=0,t.pivotY=e);continue}let r=e-t.pivotY;if(Math.abs(r)<t.threshold)continue;let n=r>0?1:-1;n!==t.committed&&(t.committed=n,t.el.classList.toggle("is-scroll-up",-1===n),t.el.classList.toggle("is-scroll-down",1===n),t.el.classList.remove("is-scroll-top")),t.pivotY=e}};window.addEventListener("scroll",()=>{n||(n=!0,requestAnimationFrame(a))},{passive:!0})}()}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",o,{once:!0}):o()},{"./utils.js":"kSWLz","@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],kSWLz:[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"FINSWEET_SELECTORS",()=>i),a.export(r,"attrBool",()=>o),a.export(r,"attrNum",()=>l),a.export(r,"flattenDisplayContents",()=>s),a.export(r,"removeCMSList",()=>c);let i="[fs-list-element], [fs-list-nest], [fs-list-instance]";function o(e,t,r=!1){let n=e.getAttribute(t);return null===n?r:"True"===n||"true"===n}function l(e,t,r){let n=parseFloat(e.getAttribute(t)||"");return Number.isFinite(n)?n:r}function s(e){if(!e)return;let t=e.firstElementChild;for(;t&&t.classList.contains("u-display-contents");){let r=t.classList.contains("w-dyn-list"),n=t.hasAttribute("fs-list-element")||t.querySelector(i);if(r||n)break;for(;t.firstChild;)e.insertBefore(t.firstChild,t);e.removeChild(t),t=e.firstElementChild}}function c(e){if(!e)return;let t=Array.from(e.children).find(e=>e.classList.contains("w-dyn-list"));if(!t||t.hasAttribute("fs-list-element")||t.querySelector(i))return;let r=t.querySelector(".w-dyn-items")?.children;if(!r)return;let n=[...e.children];[...r].forEach(t=>{let r=[...t.children].find(e=>!e.classList.contains("w-condition-invisible"));r&&e.appendChild(r)}),n.forEach(e=>e.remove())}},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"36BZy":[function(e,t,r,n){r.interopDefault=function(e){return e&&e.__esModule?e:{default:e}},r.defineInteropFlag=function(e){Object.defineProperty(e,"__esModule",{value:!0})},r.exportAll=function(e,t){return Object.keys(e).forEach(function(r){"default"===r||"__esModule"===r||Object.prototype.hasOwnProperty.call(t,r)||Object.defineProperty(t,r,{enumerable:!0,get:function(){return e[r]}})}),t},r.export=function(e,t,r){Object.defineProperty(e,t,{enumerable:!0,get:r})}},{}],"3QSo5":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initAnnouncements",()=>c);let i="dismissed-announcements",o="data-announcement-slug",l="data-announcement-dismissed",s=function(){try{let e=sessionStorage.getItem(i);if(!e)return new Set;let t=JSON.parse(e);return Array.isArray(t)?new Set(t.filter(e=>"string"==typeof e)):new Set}catch(e){return new Set}}();function c(){document.querySelectorAll('[data-announcement-element="item"]').forEach(d)}function d(e){if(e.dataset.scriptInitialized)return;let t=e.getAttribute(o);if(!t)return;if(e.dataset.scriptInitialized="true",s.has(t))return void e.setAttribute(l,"");let r=e.querySelector('[data-announcement-element="dismiss"]');r&&r.addEventListener("click",()=>{s.add(t);try{sessionStorage.setItem(i,JSON.stringify([...s]))}catch(e){}e.setAttribute(l,"")})}!function(){if(!s.size)return;let e=[...s].map(e=>`[${o}="${CSS.escape(e)}"]{display:none !important;}`).join(""),t=document.createElement("style");t.setAttribute("data-announcement-hide",""),t.textContent=e,(document.head||document.documentElement).appendChild(t)}(),"loading"===document.readyState?document.addEventListener("DOMContentLoaded",c,{once:!0}):c()},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"1QC7W":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initModals",()=>s);let i="cubic-bezier(0.16, 1, 0.3, 1)";window.bruce||={};let o=window.bruce.modal??={list:{},open(e){this.list[e]?.open?.()},closeAll(){Object.values(this.list).forEach(e=>e.close?.())}},l=!1;function s(){l||(l=!0,document.addEventListener("click",e=>{let t=e.target;if(!t)return;let r=t.closest("[data-modal-trigger], a[href^='#']");if(!r)return;let n=r.getAttribute("data-modal-trigger")||r.getAttribute("href")?.slice(1);n&&o.list[n]&&("A"===r.tagName&&e.preventDefault(),o.open(n))})),document.querySelectorAll('[data-modal-element="dialog"]').forEach(e=>{var t,r;let n;if(e.dataset.scriptInitialized)return;e.dataset.scriptInitialized="true";let a=e.getAttribute("data-modal-target"),l=e.getAttribute("data-wf--modal--variant"),s=e.querySelector('[data-modal-element="content"]');s&&(s.style.transformOrigin="center bottom");let c=(t=e.querySelector('[data-modal-element="backdrop"]'),r=e.querySelector('[data-modal-element="slot"]'),"side-panel"===l?[t&&{el:t,kf:[{opacity:0},{opacity:1}],opts:{duration:300,easing:i}},s&&{el:s,kf:[{transform:"translateX(100%)"},{transform:"translateX(0)"}],opts:{duration:300,easing:i}}].filter(Boolean):"full-screen"===l?[t&&{el:t,kf:[{opacity:0},{opacity:0}],opts:{duration:200}},s&&{el:s,kf:[{opacity:0},{opacity:1}],opts:{duration:200,easing:i}},r&&{el:r,kf:[{opacity:0,transform:"translateY(2rem)"},{opacity:1,transform:"translateY(0)"}],opts:{duration:200,delay:100,easing:i}}].filter(Boolean):[t&&{el:t,kf:[{opacity:0},{opacity:1}],opts:{duration:300,easing:i}},s&&{el:s,kf:[{opacity:0,transform:"translateY(8px) scale(0.97)"},{opacity:1,transform:"translateY(0) scale(1)"}],opts:{duration:300,easing:i}}].filter(Boolean)),d=e.querySelectorAll("[data-modal-scroll]"),u=[],f=null,p=0;function m(){"u">typeof lenis&&lenis.start?lenis.start():document.body.style.overflow="",e.close(),n&&n.focus(),window.dispatchEvent(new CustomEvent("modal-close",{detail:{modal:e}}))}function y(){"u">typeof lenis&&lenis.stop?lenis.stop():document.body.style.overflow="hidden",n=document.activeElement,e.showModal(),(()=>{if("open"!==f){if("close"===f){u.forEach(e=>{e.playbackRate=1}),f="open";return}u=c.map(e=>e.el.animate(e.kf,{...e.opts,fill:"forwards"})),f="open"}})(),d.forEach(e=>e.scrollTop=0),window.dispatchEvent(new CustomEvent("modal-open",{detail:{modal:e}}))}function h(){(e=>{if("close"===f)return;if("open"===f?u.forEach(e=>{e.playbackRate=-1}):u=c.map(e=>e.el.animate([e.kf[1],e.kf[0]],{...e.opts,fill:"forwards"})),f="close",0===u.length)return e();let t=++p;Promise.all(u.map(e=>e.finished.catch(()=>null))).then(()=>{t===p&&"close"===f&&(e(),u.forEach(e=>e.cancel()),u=[],f=null)})})(m)}if(a&&new URLSearchParams(location.search).get("modal-id")===a){y();let e=new URL(location.href);e.searchParams.delete("modal-id"),history.replaceState({},"",e)}e.addEventListener("cancel",e=>{e.preventDefault(),h()}),e.addEventListener("click",e=>{e.target.closest("[data-modal-close]")&&h()}),a&&(o.list[a]={open:y,close:h})})}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",s,{once:!0}):s()},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],AysVY:[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initAccordion",()=>s);var i=e("./utils.js");let o='[data-accordion-element="list"]',l='[data-accordion-element="item"]';function s(){document.querySelectorAll(o).forEach((e,t)=>{if(e.dataset.scriptInitialized)return;let r=(0,i.attrBool)(e,"data-close-previous",!0),n=(0,i.attrBool)(e,"data-close-on-second-click",!0),a=(0,i.attrBool)(e,"data-open-on-hover"),s=(0,i.attrNum)(e,"data-open-by-default",0),c=null,d=[];(0,i.flattenDisplayContents)(e),(0,i.removeCMSList)(e);let u=[...e.querySelectorAll(l)].filter(t=>t.closest(o)===e);0!==u.length&&(e.dataset.scriptInitialized="true",u.forEach((e,i)=>{let o=[...e.querySelectorAll('[data-accordion-element="toggle"]')].find(t=>t.closest(l)===e),u=[...e.querySelectorAll('[data-accordion-element="content"]')].find(t=>t.closest(l)===e);if(!o||!u)return void console.warn("Missing elements:",e);o.setAttribute("aria-expanded","false"),o.setAttribute("id",`accordion_button_${t}_${i}`),u.setAttribute("id",`accordion_content_${t}_${i}`),o.setAttribute("aria-controls",u.id),u.setAttribute("aria-labelledby",o.id),u.style.display="none",u.style.overflow="hidden";let f=null,p=()=>{if(!f)return 0;try{f.commitStyles()}catch(e){}return f.cancel(),f=null,parseFloat(u.style.height)||0},m=(e,t,r)=>{u.style.height=`${e}px`;let n=u.animate([{height:`${e}px`},{height:`${t}px`}],{duration:300,easing:"ease-in-out",fill:"forwards"});f=n,n.onfinish=()=>{if(f===n){f=null;try{n.commitStyles()}catch(e){}n.cancel(),r()}}},y=()=>{e.classList.contains("is-active")&&(e.classList.remove("is-active"),o.setAttribute("aria-expanded","false"),m(f?p():u.getBoundingClientRect().height,0,()=>{u.style.height="",u.style.display="none"}))};d[i]=y;let h=(t=!1)=>{r&&null!==c&&c!==i&&d[c]?.(),c=i,o.setAttribute("aria-expanded","true"),e.classList.add("is-active");let n=p();if(u.style.display="block",t){u.style.height="";return}u.style.height="auto",m(n,u.scrollHeight,()=>{u.style.height=""})};s===i+1&&h(!0),o.addEventListener("click",()=>{e.classList.contains("is-active")&&n?(y(),c=null):h()}),a&&o.addEventListener("mouseenter",()=>h())}))})}window.FinsweetAttributes||=[],window.FinsweetAttributes.push(["list",e=>{Promise.all(e.map(e=>e.loadingPromise||Promise.resolve())).then(s)}]);let c=0,d=!1,u=()=>{c=0,d&&(d=!1,s())},f=()=>{d=!0,c||(c=requestAnimationFrame(u))},p=`${o}, ${l}`;new MutationObserver(e=>{for(let t of e)for(let e of t.addedNodes)if(1===e.nodeType&&(e.matches?.(p)||e.querySelector?.(p)))return void f()}).observe(document.body,{childList:!0,subtree:!0}),"loading"===document.readyState?document.addEventListener("DOMContentLoaded",s,{once:!0}):s()},{"./utils.js":"kSWLz","@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],l7e7g:[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initCollapsible",()=>o);var i=e("./utils.js");function o(){document.querySelectorAll(".collapsible_wrap").forEach((e,t)=>{if(e.dataset.scriptInitialized)return;e.dataset.scriptInitialized="true";let r=t=>[...e.querySelectorAll(t)].find(t=>t.closest(".collapsible_wrap")===e),n=r(".collapsible_trigger"),a=r(".collapsible_content");if(!n||!a)return void console.warn("Missing elements:",e);let o=(0,i.attrBool)(e,"data-open-by-default"),l=(0,i.attrBool)(e,"data-open-on-hover"),s=(0,i.attrNum)(e,"data-duration",.3),c=(s>0?s:.3)*1e3;n.id=`collapsible_trigger_${t}`,a.id=`collapsible_content_${t}`,n.setAttribute("aria-controls",a.id),a.setAttribute("aria-labelledby",n.id),n.setAttribute("aria-expanded","false"),a.style.display="none",a.style.overflow="hidden";let d=e.getAttribute("data-collapsible-id"),u=d?`[data-component="collapsible"][data-collapsible-id="${CSS.escape(d)}"]`:null,f=()=>u?document.querySelectorAll(u):[],p=null,m=()=>{if(!p)return 0;try{p.commitStyles()}catch(e){}return p.cancel(),p=null,parseFloat(a.style.height)||0},y=(e,t,r)=>{a.style.height=`${e}px`;let n=a.animate([{height:`${e}px`},{height:`${t}px`}],{duration:c,easing:"ease-in-out",fill:"forwards"});p=n,n.onfinish=()=>{p===n&&(p=null,r())}},h=(t=!1)=>{e.classList.add("is-active"),n.setAttribute("aria-expanded","true"),f().forEach(e=>e.classList.add("is-active"));let r=m();if(a.style.display="block",t){a.style.height="";return}a.style.height="auto",y(r,a.scrollHeight,()=>{a.style.height=""})};o&&h(!0),n.addEventListener("click",()=>{e.classList.contains("is-active")?e.classList.contains("is-active")&&(e.classList.remove("is-active"),n.setAttribute("aria-expanded","false"),f().forEach(e=>e.classList.remove("is-active")),y(p?m():a.getBoundingClientRect().height,0,()=>{a.style.height="",a.style.display="none"})):h()}),l&&n.addEventListener("mouseenter",()=>h())})}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",o,{once:!0}):o()},{"./utils.js":"kSWLz","@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"9XUdG":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initDropdown",()=>f);var i=e("./utils.js");let o='[data-dropdown-element="wrap"]',l="translateY(8px) scale(0.97)",s="translateY(0px) scale(1)",c=0,d=null,u=!1;function f(){u||(u=!0,document.addEventListener("click",e=>{if(!d)return;let t=e.target;t&&!d.wrap.contains(t)&&d.close()}),document.addEventListener("keydown",e=>{if(!d)return;if("Escape"===e.key){let{toggle:e,close:t}=d;t(),e.focus();return}if("ArrowDown"!==e.key&&"ArrowUp"!==e.key)return;let t=document.activeElement;if(!t||!d.wrap.contains(t))return;let r=d.focusableItems;if(!r.length)return;e.preventDefault();let n="ArrowDown"===e.key?1:-1,a=r.indexOf(t),i=-1===a?1===n?0:r.length-1:(a+n+r.length)%r.length;r[i].focus()})),document.querySelectorAll(o).forEach((e,t)=>{if(e.dataset.scriptInitialized)return;e.dataset.scriptInitialized="true";let r=t=>[...e.querySelectorAll(t)].find(t=>t.closest(o)===e),n=r('[data-dropdown-element="toggle"]'),a=r('[data-dropdown-element="content"]');if(!n||!a)return void console.warn("Missing elements:",e);let u=(0,i.attrBool)(e,"data-open-on-hover-in"),f=(0,i.attrBool)(e,"data-close-on-hover-out");n.id=`dropdown_toggle_${t}`,a.id=`dropdown_content_${t}`,n.setAttribute("aria-controls",a.id),n.setAttribute("aria-expanded","false"),a.setAttribute("aria-labelledby",n.id),a.style.display="none",a.style.transformOrigin="top";let p=null,m=()=>{if(!p)return null;try{p.commitStyles()}catch(e){}return p.cancel(),p=null,{height:parseFloat(a.style.height)||0,opacity:a.style.opacity||"1",transform:a.style.transform||s}},y=(e,t,r)=>{a.style.overflow="hidden",a.style.height=`${e.height}px`,a.style.opacity=e.opacity,a.style.transform=e.transform;let n=a.animate([{height:`${e.height}px`,opacity:e.opacity,transform:e.transform},{height:`${t.height}px`,opacity:t.opacity,transform:t.transform}],{duration:200,easing:"ease-out",fill:"forwards"});p=n,n.onfinish=()=>{p===n&&(p=null,r(),n.cancel())}},h=()=>{a.style.height="",a.style.opacity="",a.style.transform=""},g=()=>"true"===n.getAttribute("aria-expanded"),b=()=>{if(g())return;d&&d.wrap!==e&&d.close(),c+=1,e.style.zIndex=String(1e3+c),e.classList.add("is-active"),n.setAttribute("aria-expanded","true");let t=m()||{height:0,opacity:"0",transform:l};a.style.display="block",a.style.height="auto";let r=a.scrollHeight;d={wrap:e,toggle:n,close:v,focusableItems:[...a.querySelectorAll("a, button")]},y(t,{height:r,opacity:"1",transform:s},()=>{h(),a.style.overflow=""})},v=()=>{g()&&(e.classList.remove("is-active"),n.setAttribute("aria-expanded","false"),d&&d.wrap===e&&(d=null),y(m()||{height:a.getBoundingClientRect().height,opacity:"1",transform:s},{height:0,opacity:"0",transform:l},()=>{h(),a.style.display="none",e.style.zIndex="",null===d&&(c=0)}))};n.addEventListener("click",()=>{g()?v():b()}),u&&e.addEventListener("mouseenter",b),f&&e.addEventListener("mouseleave",v)})}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",f,{once:!0}):f()},{"./utils.js":"kSWLz","@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"7AES0":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initVariables",()=>b),a.export(r,"refreshVariables",()=>v),a.export(r,"setGlobal",()=>w);let i=/\{\{\s*([\$\w-]+)\s*\}\}/g,o=/\{\{\s*[\$\w-]+\s*\}\}/,l=["href","src","alt","title","aria-label","placeholder","value"],s=l.map(e=>`[${e}*="{{"]`).join(","),c=[500,1500,3500],d={$year:String(new Date().getFullYear())},u=new WeakMap,f=new Map;function p(e){return(t,r)=>{let n=function(e,t){if(e.startsWith("$"))return e in d?d[e]:null;let r=`data-var-${e}`,n=1===t.nodeType?t:t.parentElement;for(;n;){if(n.hasAttribute(r))return n.getAttribute(r)??"";n=n.parentElement}return e in d?d[e]:null}(r,e);return null!==n?n:t}}let m=0,y=!1,h=()=>{document.querySelectorAll("[data-variable-key]").forEach(e=>{let t=e.getAttribute("data-variable-key"),r=e.getAttribute("data-variable-value");!t||t in d||(d[t]=r??"")}),function(){let e,t=document.createTreeWalker(document.body,NodeFilter.SHOW_TEXT,{acceptNode:e=>o.test(e.nodeValue||"")||u.has(e)?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT}),r=[];for(;e=t.nextNode();)r.push(e);for(let e of r){let t=u.get(e);void 0===t&&(t=e.nodeValue||"",u.set(e,t));let r=t.replace(i,p(e));r!==e.nodeValue&&(e.nodeValue=r)}let n=new Set(document.querySelectorAll(s));for(let e of f.keys())n.add(e);for(let e of n){let t=f.get(e);for(let r of l){let n=e.getAttribute(r);if(null===n)continue;if(!t||!(r in t)){if(!n.includes("{{"))continue;t||(t={},f.set(e,t)),t[r]=n}let a=t[r].replace(i,p(e));a!==n&&e.setAttribute(r,a)}}}(),y=!1},g=()=>{y=!0,m||(m=requestAnimationFrame(()=>{m=0,h()}))};function b(){h()}function v(){g()}function w(e,t){d[e]=t,g()}let A=new MutationObserver(e=>{for(let t of e)for(let e of t.addedNodes)if(3===e.nodeType?(e.nodeValue||"").includes("{{"):1===e.nodeType&&!!((e.textContent||"").includes("{{")||e.matches(s)||e.querySelector(s)||e.matches("[data-variable-key]")||e.querySelector("[data-variable-key]")))return void g()}),S=()=>{b(),A.observe(document.body,{childList:!0,subtree:!0}),c.forEach(e=>setTimeout(()=>{y&&h()},e))};"loading"===document.readyState?document.addEventListener("DOMContentLoaded",S,{once:!0}):S()},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"4nhAH":[function(e,t,r,n){var a=e("./variables.js"),i=e("./utils.js");let o="bruce-city",l="[data-city-list]",s="data-city-var-",c=[500,1500,3500],d=new Set,u=[],f=new Set,p=null,m=e=>u.some(t=>t.slug===e);function y(){let e=new URLSearchParams(location.search).getAll("city").map(e=>e.trim().toLowerCase()).filter(Boolean);if(0===e.length)return[];let t=[],r=[];for(let n of e){let e=u.find(e=>e.slug.trim().toLowerCase()===n||e.name.trim().toLowerCase()===n);e?t.push(e):r.push(n)}return r.length&&console.warn("[bruce.city] URL city filter — these values matched no city:",r,"Known cities:",u.map(e=>({slug:e.slug,name:e.name}))),t}function h(e){let t=u.find(t=>t.slug===e);if(!t)return;let r=e!==p;for(let r of(p=e,(0,a.setGlobal)("city",t.slug),(0,a.setGlobal)("city-name",t.name),f))(0,a.setGlobal)(r,t.vars[r]??"");document.querySelectorAll("[data-set-city]").forEach(e=>{e.dataset.cityActive=e.getAttribute("data-set-city")===p?"true":"false"}),r&&d.forEach(t=>{try{t(e)}catch(e){console.error("[bruce.city] onChange listener threw",e)}})}function g(){let e,t,r=p;if(e=[],t=new Set,document.querySelectorAll(`${l} [data-city-slug]`).forEach(r=>{let n=r.getAttribute("data-city-slug");if(!n)return;let a={};for(let e of r.attributes){if(!e.name.startsWith(s))continue;let r=e.name.slice(s.length);a[r]=e.value,t.add(r)}let o=parseFloat(a.lat),l=parseFloat(a.lng),c=isNaN(o)||isNaN(l)?null:[l,o];e.push({slug:n,name:r.getAttribute("data-city-name")??"",isDefault:(0,i.attrBool)(r,"data-city-default"),coords:c,vars:a})}),u=e,f=t,0===u.length)return;let n=r&&m(r)?r:function(){let e=y()[0]?.slug??null;if(e)return e;let t=null;try{t=localStorage.getItem(o)}catch{}if(t&&m(t))return t;let r=document.body?.dataset.defaultCity;return r&&m(r)?r:u.find(e=>e.isDefault)?.slug??u[0]?.slug??null}();n&&h(n)}let b={get:()=>p,set(e){if(e!==p){if(!m(e))return void console.warn(`[bruce.city] unknown city "${e}" \u{2014} ignoring`);h(e);try{localStorage.setItem(o,e)}catch{}}},all:()=>u.map(e=>({...e,vars:{...e.vars}})),urlSelection:()=>y().map(e=>({...e,vars:{...e.vars}})),onChange:e=>(d.add(e),()=>d.delete(e))};function v(e){let t=e.target?.closest?.("[data-set-city]");t&&(e.preventDefault(),b.set(t.getAttribute("data-set-city")??""))}window.bruce||={},window.bruce.city=b,document.addEventListener("click",v),document.addEventListener("keydown",e=>{if("Enter"!==e.key&&" "!==e.key)return;let t=e.target?.closest?.("[data-set-city]");t&&"BUTTON"!==t.tagName&&"A"!==t.tagName&&v(e)}),window.FinsweetAttributes||=[],window.FinsweetAttributes.push(["list",e=>{Promise.all(e.map(e=>e.loadingPromise||Promise.resolve())).then(g)}]);let w=0,A=()=>{w||(w=requestAnimationFrame(()=>{w=0,g()}))},S=new MutationObserver(e=>{for(let t of e)for(let e of t.addedNodes)if(1===e.nodeType&&(e.matches?.(l)||e.matches?.("[data-city-slug]")))return void A()}),L=()=>{g(),S.observe(document.body,{childList:!0,subtree:!0}),c.forEach(e=>setTimeout(()=>{p||g()},e))};"loading"===document.readyState?document.addEventListener("DOMContentLoaded",L,{once:!0}):L()},{"./variables.js":"7AES0","./utils.js":"kSWLz"}],i1g0X:[function(e,t,r,n){var a=e("./city-visibility-decide.js");let i="data-city-show",o="is-city-ready",l=[500,1500,3500],s=new Set;function c(){let e=window.bruce?.city;if(!e)return;let t=e.get(),r=e.all();document.querySelectorAll(`[${i}]`).forEach(e=>{!function(e,t,r){let n=e.getAttribute(i),{visible:o,unknownValues:l}=(0,a.shouldShow)(n,t,r);for(let t of(e.classList.toggle("is-city-hidden",!o),l)){let e=`${n}|${t}`;s.has(e)||(s.add(e),console.warn(`[bruce.city-visibility] data-city-show="${n}" \u{2014} value "${t}" matched no known city.`,"Known cities:",r.map(e=>({slug:e.slug,name:e.name}))))}}(e,t,r)}),t&&document.body.classList.add(o)}let d=0,u=()=>{d||(d=requestAnimationFrame(()=>{d=0,c()}))},f=new MutationObserver(e=>{for(let t of e)for(let e of t.addedNodes)if(1===e.nodeType&&(e.matches?.(`[${i}]`)||e.querySelector?.(`[${i}]`)))return void u()}),p=()=>{let e=window.bruce?.city;e?.onChange?.(()=>c()),c(),f.observe(document.body,{childList:!0,subtree:!0}),l.forEach(e=>setTimeout(()=>{document.body.classList.contains(o)||c()},e))};"loading"===document.readyState?document.addEventListener("DOMContentLoaded",p,{once:!0}):p()},{"./city-visibility-decide.js":"8EK4F"}],"8EK4F":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");function i(e,t,r){let n=(e??"").trim();if(""===n)return{visible:!0,unknownValues:[]};let a=n.split(",").map(e=>e.trim().toLowerCase()).filter(Boolean);if(0===a.length)return{visible:!0,unknownValues:[]};if(!t)return{visible:!1,unknownValues:[]};let i=t.toLowerCase(),o=!1,l=[];for(let e of a){let t=r.find(t=>t.slug.toLowerCase()===e||t.name.toLowerCase()===e);if(!t){l.push(e);continue}t.slug.toLowerCase()===i&&(o=!0)}return{visible:o,unknownValues:l}}a.defineInteropFlag(r),a.export(r,"shouldShow",()=>i)},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],ULWap:[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"requestUserLocation",()=>l),a.export(r,"getInitialUserLocation",()=>s),a.export(r,"getLastKnown",()=>c);let i=null,o=null;function l(){return new Promise(e=>{if(!navigator.geolocation)return e(null);let t=!1,r=r=>{t||(t=!0,r&&(i=r),e(r))},n=setTimeout(()=>r(null),8e3);navigator.geolocation.getCurrentPosition(e=>{clearTimeout(n),r([e.coords.longitude,e.coords.latitude])},()=>{clearTimeout(n),r(null)},{timeout:8e3,maximumAge:6e4,enableHighAccuracy:!1})})}function s(){return o||(o=l()),o}function c(){return i}window.bruce||={},window.bruce.location={requestUserLocation:l,getInitialUserLocation:s,getLastKnown:c}},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],lFaBY:[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"buildSearchQuery",()=>o),a.export(r,"initStudiosSearchRedirect",()=>l);var i=e("./studios-filter-count.js");function o(e){let t=new URLSearchParams,r=(e.get("q")??"").toString().trim();for(let[n,a]of(r&&t.set("q",r),e.entries()))"q"!==n&&t.append(n,a.toString());return t.toString()}function l(){document.querySelector('[data-studios-element="component"]')||document.querySelectorAll("form[data-studios-search]").forEach(e=>{e.dataset.searchRedirectInit||(e.dataset.searchRedirectInit="true",e.addEventListener("submit",t=>{let r,n;return t.preventDefault(),r=e.getAttribute("action")||"/s",n=o(new FormData(e)),void window.location.assign(n?`${r}?${n}`:r)}),e.addEventListener("change",()=>(0,i.updateFilterCounts)(e)),e.addEventListener("click",t=>{let r=t.target;if(!(r instanceof Element))return;let n=r.closest("[data-search-clear]");if(n){let r,a;t.preventDefault(),a=(r=n.getAttribute("data-search-clear"))?`input[name="${CSS.escape(r)}"]`:"input[type=checkbox], input[type=radio]",e.querySelectorAll(a).forEach(e=>{("checkbox"===e.type||"radio"===e.type)&&(e.checked=!1)}),(0,i.updateFilterCounts)(e)}}),(0,i.updateFilterCounts)(e))})}"u">typeof document&&("loading"===document.readyState?document.addEventListener("DOMContentLoaded",l,{once:!0}):l())},{"./studios-filter-count.js":"4BH4E","@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"4BH4E":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");function i(e){let t=new Map;for(let r of e)t.set(r,(t.get(r)??0)+1);return{total:e.length,byGroup:t}}function o(e){let t=new Set,r=[];for(let n of e.querySelectorAll("input:checked")){if(!n.name||"q"===n.name)continue;let e=`${n.name}\0${n.value}`;t.has(e)||(t.add(e),r.push(n.name))}let{total:n,byGroup:a}=i(r);e.dataset.hasFilters=n>0?"true":"false",e.dataset.filterCount=String(n),e.querySelectorAll("[data-search-group]").forEach(e=>{let t=e.getAttribute("data-search-group")||"",r=a.get(t)??0;e.dataset.hasFilters=r>0?"true":"false",e.dataset.filterCount=String(r)}),e.querySelectorAll("[data-search-count]").forEach(e=>{let t=e.getAttribute("data-search-count");e.textContent=String(t?a.get(t)??0:n)})}a.defineInteropFlag(r),a.export(r,"tallyCheckedFilters",()=>i),a.export(r,"updateFilterCounts",()=>o)},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"1nMjd":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initSliders",()=>s),a.export(r,"initSlider",()=>c);var i=e("./utils.js");let o="[data-slider='component']:not([data-slider='component'] [data-slider='component'])";function l(e){if(e.dataset.scriptInitialized)return;let t=e.querySelector(".slider_element"),r=e.querySelector(".slider_list");if(!t||!r)return;(0,i.flattenDisplayContents)(r),(0,i.removeCMSList)(r),[...r.children].forEach(e=>e.classList.add("swiper-slide"));let n=r.children.length;if(0===n)return;e.dataset.scriptInitialized="true";let a="False"!==t.getAttribute("data-follow-finger"),o=(0,i.attrBool)(t,"data-free-mode"),l=(0,i.attrBool)(t,"data-mousewheel"),s=(0,i.attrBool)(t,"data-slide-to-clicked"),c=(0,i.attrBool)(t,"data-centered"),d=(0,i.attrBool)(t,"data-loop"),u=(0,i.attrNum)(t,"data-speed",600),f=Math.min((0,i.attrNum)(t,"data-initial-slide",0),n-1),p=e.querySelector(".slider_bullet_list"),m=[...e.querySelectorAll("[data-slider='next'] button")],y=[...e.querySelectorAll("[data-slider='previous'] button")];e._swiper=new Swiper(t,{slidesPerView:"auto",followFinger:a,loop:d,loopAdditionalSlides:10*!!d,freeMode:o,slideToClickedSlide:s,centeredSlides:c,centeredSlidesBounds:c,autoHeight:!1,initialSlide:f,speed:u,mousewheel:{enabled:l,forceToAxis:!0},keyboard:{enabled:!0,onlyInViewport:!0},navigation:!!m.length&&!!y.length&&{nextEl:m,prevEl:y},pagination:!!p&&{el:p,bulletActiveClass:"is-active",bulletClass:"slider_bullet_item",bulletElement:"button",clickable:!0},slideActiveClass:"is-active",slideDuplicateActiveClass:"is-active"})}function s(){document.querySelectorAll(o).forEach(e=>{l(e)})}function c(e){e&&e.matches(o)&&l(e)}window.FinsweetAttributes||=[],window.FinsweetAttributes.push(["list",e=>{Promise.all(e.map(e=>e.loadingPromise||Promise.resolve())).then(s)}]);let d=0,u=!1,f=()=>{d=0,u&&(u=!1,s())},p=()=>{u=!0,d||(d=requestAnimationFrame(f))};new MutationObserver(e=>{for(let t of e)for(let e of t.addedNodes){if(1!==e.nodeType||!(e.matches?.(".w-dyn-item")||e.querySelector?.(".w-dyn-item")))continue;let t=e.closest?.(o)||e.querySelector?.(o);if(t&&!t.dataset.scriptInitialized)return void p()}}).observe(document.body,{childList:!0,subtree:!0}),"loading"===document.readyState?document.addEventListener("DOMContentLoaded",s,{once:!0}):s()},{"./utils.js":"kSWLz","@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"5aQpn":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initTabs",()=>s),a.export(r,"initTab",()=>c);var i=e("./utils.js");function o(e){return e.toLowerCase().replaceAll(" ","-")}function l(e,t){if(e.dataset.scriptInitialized)return;let r=(0,i.attrBool)(e,"data-loop-controls"),n=(0,i.attrBool)(e,"data-pause-on-hover"),a=(0,i.attrNum)(e,"data-autoplay-duration",0),l=e.querySelector(".tab_button_list"),s=e.querySelector(".tab_content_list");if(!l||!s)return void console.warn("Tab component missing .tab_button_list or .tab_content_list:",e);let c=e.querySelector("[data-tab='previous'] button"),d=e.querySelector("[data-tab='next'] button"),u=e.querySelector("[data-tab-button='toggle']"),f=e.querySelector("[data-tab-button='toggle'] button");(0,i.flattenDisplayContents)(l),(0,i.flattenDisplayContents)(s),(0,i.removeCMSList)(l),(0,i.removeCMSList)(s);let p=Array.from(l.children).map(e=>e.querySelector("button")||e),m=p.map(e=>{let t=e;for(;t.parentElement&&t.parentElement!==l;)t=t.parentElement;return t});m.forEach((e,t)=>{e!==p[t]&&(e.removeAttribute("role"),e.removeAttribute("aria-selected"),e.removeAttribute("aria-controls"),e.removeAttribute("tabindex"))});let y=Array.from(s.children).map(e=>e);if(!p.length||!y.length)return void console.warn("Tab component has no buttons or panels:",e);let h=m.map(e=>{if("accordion"!==e.getAttribute("data-wf--tab-link--variant"))return null;let t=e.querySelector("[data-tab-link-content]");return t?(t.style.display="none",t):null});l.setAttribute("role","tablist"),s.removeAttribute("role"),y.forEach(e=>{e.style.display="none",e.setAttribute("role","tabpanel")}),p.forEach(e=>e.setAttribute("role","tab"));let g=-1,b=null,v=!0;e.dataset.scriptInitialized="true";let w=(e,t=!1)=>{if(e===g)return;let n=g,a=(e,t)=>{let r=p[e];r.classList.toggle("is-active",t),m[e]!==r&&m[e].classList.toggle("is-active",t),r.setAttribute("aria-selected",t?"true":"false"),r.setAttribute("tabindex",t?"0":"-1"),h[e]&&r.setAttribute("aria-expanded",t?"true":"false")};-1===n?(p.forEach((t,r)=>a(r,r===e)),y.forEach((t,r)=>t.classList.toggle("is-active",r===e))):(a(n,!1),a(e,!0),y[n]?.classList.toggle("is-active",!1),y[e]?.classList.toggle("is-active",!0)),d&&(d.disabled=e===p.length-1&&!r),c&&(c.disabled=0===e&&!r),t&&p[e].focus(),-1!==n&&h[n]&&(h[n].style.display="none"),h[e]&&(h[e].style.display="block"),-1!==n&&y[n]&&(y[n].style.display="none"),y[e]&&(y[e].style.display="block"),b&&!v&&b.restart(),l.scrollWidth>l.clientWidth&&l.scrollTo({left:m[e].offsetLeft,behavior:"smooth"}),g=e},A=(e,t=!1)=>w((g+e+p.length)%p.length,t);d?.addEventListener("click",()=>A(1)),c?.addEventListener("click",()=>A(-1));let S=e.getAttribute("data-tab-component-id"),L=S?o(S):String(t+1),E=new URLSearchParams(location.search).get("tab-id");if(p.forEach((t,r)=>{let n=t.getAttribute("data-tab-item-id"),i=n?o(n):String(r+1),l=`tab-button-${L}-${i}`,s=`tab-panel-${L}-${i}`;t.setAttribute("id",l),t.setAttribute("aria-controls",s),y[r]?.setAttribute("id",s),y[r]?.setAttribute("aria-labelledby",l),E===`${L}-${i}`&&queueMicrotask(()=>{w(r),a=0,e.scrollIntoView({behavior:"smooth",block:"start"});let t=new URL(location.href);t.searchParams.delete("tab-id"),history.replaceState({},"",t)}),t.addEventListener("click",()=>w(r)),t.addEventListener("keydown",e=>{"ArrowRight"===e.key||"ArrowDown"===e.key?(e.preventDefault(),A(1,!0)):"ArrowLeft"===e.key||"ArrowUp"===e.key?(e.preventDefault(),A(-1,!0)):"Home"===e.key?(e.preventDefault(),w(0,!0)):"End"===e.key&&(e.preventDefault(),w(p.length-1,!0))})}),w(0),0!==a){let t=1e3*a,r=0,i=0,o=0,l=!1,s=t=>{e.style.setProperty("--progress",String(t))},c=e=>{if(!l)return;let n=o+(e-i);if(n>=t){s(1),l=!1,r=0,o=0,A(1,!1);return}s(n/t),r=requestAnimationFrame(c)},d=()=>{r&&cancelAnimationFrame(r),o=0,i=performance.now(),l=!0,s(0),r=requestAnimationFrame(c)};b={play:()=>{if(!l){if(o>=t)return void d();i=performance.now(),l=!0,r=requestAnimationFrame(c)}},pause:()=>{l&&(l=!1,r&&(cancelAnimationFrame(r),r=0),o+=performance.now()-i)},restart:d},d();let p=!1,m=!1,y=!1,h=!0,g=()=>{y||!h||v||p||m?b?.pause():b?.play()},w=()=>{v=!v,f?.setAttribute("aria-pressed",!v?"true":"false"),u?.classList.toggle("is-pressed",!v),v||(p=!1,m=!1,y=!1),g()};w(),f?.addEventListener("click",()=>w());let S=e=>{y=e.matches,g(),v=!e.matches,w()},L=window.matchMedia("(prefers-reduced-motion: reduce)");S(L),L.addEventListener("change",S),n&&(e.addEventListener("mouseenter",()=>{p=!0,g()}),e.addEventListener("mouseleave",()=>{m=!1,p=!1,g()})),e.addEventListener("focusin",()=>{m=!0,g()}),e.addEventListener("focusout",t=>{let r=t.relatedTarget;r&&e.contains(r)||(m=!1,g())}),new IntersectionObserver(e=>{h=e[0].isIntersecting,g()},{threshold:0}).observe(e)}e._tab={makeActive:w,updateIndex:A,get activeIndex(){return g}}}function s(){document.querySelectorAll(".tab_wrap").forEach((e,t)=>{l(e,t)})}function c(e){e&&e.classList.contains("tab_wrap")&&l(e,0)}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",s,{once:!0}):s()},{"./utils.js":"kSWLz","@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}],"17MEu":[function(e,t,r,n){var a=e("@parcel/transformer-js/src/esmodule-helpers.js");a.defineInteropFlag(r),a.export(r,"initVisualVideos",()=>m),a.export(r,"initVisualVideo",()=>y);let i=16/9,o=["swiper-slide-active","swiper-slide-visible","swiper-slide-next","swiper-slide-prev"],l={full:["play","progress","current-time","mute","volume","captions","settings","pip","airplay","fullscreen"],minimal:["play","progress","mute","fullscreen"],none:[]},s=/youtube\.com|youtu\.be/,c=/vimeo\.com/,d=/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([^?&#]+)/,u=/vimeo\.com\/(?:video\/)?(\d+)/;function f(e){for(let t of o)if(e.classList.contains(t))return!0;return!1}function p(e){if(e.dataset.scriptInitialized)return;e.dataset.scriptInitialized="true";let t=e.querySelector(".video_player");if(!t)return void console.warn("Visual Video: .video_player element missing");let r=e.querySelector(".video_poster"),n=e.closest("[data-video='component']"),a=e.closest(".swiper-slide"),o=e.getAttribute("data-src")||"";if(!o)return;let p=e.getAttribute("data-captions")||"",m=e.hasAttribute("data-autoplay"),y=e.hasAttribute("data-muted")||m,h=e.hasAttribute("data-loop"),g=l[e.getAttribute("data-controls")||"full"]||l.full,b=s.test(o)?"youtube":c.test(o)?"vimeo":"html5",v="youtube"===b?(o.match(d)||[])[1]||"":"vimeo"===b?(o.match(u)||[])[1]||"":o,w=function(e,t){if(!e||!e.includes("/"))return t;let r=e.split("/"),n=parseFloat(r[0]),a=parseFloat(r[1]);return n>0&&a>0?n/a:t}(e.getAttribute("data-source-aspect"),i),A=null,S=t=>{t!==A&&(A=t,e.setAttribute("data-video-state",t),n&&n.setAttribute("data-video-state",t))};S(m?"playing":"idle");let L=!1,E=()=>{L||(L=!0,function(){let n;if("youtube"===b||"vimeo"===b)(n=document.createElement("div")).dataset.plyrProvider=b,n.dataset.plyrEmbedId=v;else{let e;(n=document.createElement("video")).setAttribute("playsinline",""),g.length&&n.setAttribute("controls","");let t=document.createElement("source");if(t.src=o,t.type="webm"===(e=o.split(".").pop().split("?")[0].toLowerCase())?"video/webm":"ogg"===e?"video/ogg":"video/mp4",n.appendChild(t),p){let e=document.createElement("track");e.kind="captions",e.src=p,e.srclang="en",e.label="English",e.default=!0,n.appendChild(e)}}t.insertBefore(n,t.firstChild);let a=new Plyr(n,{controls:g,autoplay:m,muted:y,loop:{active:h},playsinline:!0,youtube:{noCookie:!0,rel:0,showinfo:0,iv_load_policy:3,modestbranding:1,controls:0,disablekb:1,playsinline:1,fs:0,cc_load_policy:0,hl:"en",enablejsapi:1},vimeo:{byline:!1,portrait:!1,title:!1,transparent:!1,dnt:!0}}),i=null,l=0,s=0,c=0,d=()=>i=t.querySelector("iframe, video"),u=()=>{let t,r;if(c=0,!i&&!d())return;let n=e.getBoundingClientRect(),a=n.width,o=n.height;a&&o&&(a!==l||o!==s)&&(l=a,s=o,a/o>w?(t=a,r=a/w):(r=o,t=o*w),i.style.cssText+=`position:absolute;top:50%;left:50%;width:${t}px;height:${r}px;max-width:none;transform:translate(-50%,-50%);`)},f=()=>{c||(c=requestAnimationFrame(u))},A=()=>{l=0,s=0,f()};if(A(),a.on("ready",async()=>{if(d(),A(),m||S("idle"),"vimeo"===b)try{let e=a.embed;if(e&&e.getVideoWidth&&e.getVideoHeight){let[t,r]=await Promise.all([e.getVideoWidth(),e.getVideoHeight()]);t>0&&r>0&&(w=t/r,A())}}catch(e){}}),"html5"===b){let e=t.querySelector("video");e&&e.addEventListener("loadedmetadata",()=>{e.videoWidth&&e.videoHeight&&(w=e.videoWidth/e.videoHeight,A())},{once:!0})}let L=new ResizeObserver(f);L.observe(e),a.on("playing",()=>S("playing")),a.on("pause",()=>S("paused")),a.on("ended",()=>{S("ended"),r&&r.classList.remove("is-active")}),r&&(r.addEventListener("click",()=>a.play(),{passive:!0}),a.on("playing",()=>r.classList.add("is-active")),m&&r.classList.add("is-active")),a.on("destroy",()=>{L.disconnect(),c&&cancelAnimationFrame(c)}),e._plyr=a}())};if(a)if(f(a))E();else{let e=new MutationObserver(()=>{f(a)&&(E(),e.disconnect())});e.observe(a,{attributes:!0,attributeFilter:["class"]})}else{let t=new IntersectionObserver(e=>{for(let r of e)if(r.isIntersecting){E(),t.disconnect();break}},{rootMargin:"200px"});t.observe(e)}}function m(){document.querySelectorAll(".video_wrap").forEach(e=>{p(e)})}function y(e){e&&e.classList.contains("video_wrap")&&p(e)}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",m,{once:!0}):m()},{"@parcel/transformer-js/src/esmodule-helpers.js":"36BZy"}]},["8iFs3"],"8iFs3","parcelRequire08d4",{});
+// modules are defined as an array
+// [ module function, map of requires ]
+//
+// map of requires is short require name -> numeric require
+//
+// anything defined in a previous bundle is accessed via the
+// orig method which is the require for previous bundles
+
+(function (
+  modules,
+  entry,
+  mainEntry,
+  parcelRequireName,
+  externals,
+  distDir,
+  publicUrl,
+  devServer
+) {
+  /* eslint-disable no-undef */
+  var globalObject =
+    typeof globalThis !== 'undefined'
+      ? globalThis
+      : typeof self !== 'undefined'
+      ? self
+      : typeof window !== 'undefined'
+      ? window
+      : typeof global !== 'undefined'
+      ? global
+      : {};
+  /* eslint-enable no-undef */
+
+  // Save the require from previous bundle to this closure if any
+  var previousRequire =
+    typeof globalObject[parcelRequireName] === 'function' &&
+    globalObject[parcelRequireName];
+
+  var importMap = previousRequire.i || {};
+  var cache = previousRequire.cache || {};
+  // Do not use `require` to prevent Webpack from trying to bundle this call
+  var nodeRequire =
+    typeof module !== 'undefined' &&
+    typeof module.require === 'function' &&
+    module.require.bind(module);
+
+  function newRequire(name, jumped) {
+    if (!cache[name]) {
+      if (!modules[name]) {
+        if (externals[name]) {
+          return externals[name];
+        }
+        // if we cannot find the module within our internal map or
+        // cache jump to the current global require ie. the last bundle
+        // that was added to the page.
+        var currentRequire =
+          typeof globalObject[parcelRequireName] === 'function' &&
+          globalObject[parcelRequireName];
+        if (!jumped && currentRequire) {
+          return currentRequire(name, true);
+        }
+
+        // If there are other bundles on this page the require from the
+        // previous one is saved to 'previousRequire'. Repeat this as
+        // many times as there are bundles until the module is found or
+        // we exhaust the require chain.
+        if (previousRequire) {
+          return previousRequire(name, true);
+        }
+
+        // Try the node require function if it exists.
+        if (nodeRequire && typeof name === 'string') {
+          return nodeRequire(name);
+        }
+
+        var err = new Error("Cannot find module '" + name + "'");
+        err.code = 'MODULE_NOT_FOUND';
+        throw err;
+      }
+
+      localRequire.resolve = resolve;
+      localRequire.cache = {};
+
+      var module = (cache[name] = new newRequire.Module(name));
+
+      modules[name][0].call(
+        module.exports,
+        localRequire,
+        module,
+        module.exports,
+        globalObject
+      );
+    }
+
+    return cache[name].exports;
+
+    function localRequire(x) {
+      var res = localRequire.resolve(x);
+      if (res === false) {
+        return {};
+      }
+      // Synthesize a module to follow re-exports.
+      if (Array.isArray(res)) {
+        var m = {__esModule: true};
+        res.forEach(function (v) {
+          var key = v[0];
+          var id = v[1];
+          var exp = v[2] || v[0];
+          var x = newRequire(id);
+          if (key === '*') {
+            Object.keys(x).forEach(function (key) {
+              if (
+                key === 'default' ||
+                key === '__esModule' ||
+                Object.prototype.hasOwnProperty.call(m, key)
+              ) {
+                return;
+              }
+
+              Object.defineProperty(m, key, {
+                enumerable: true,
+                get: function () {
+                  return x[key];
+                },
+              });
+            });
+          } else if (exp === '*') {
+            Object.defineProperty(m, key, {
+              enumerable: true,
+              value: x,
+            });
+          } else {
+            Object.defineProperty(m, key, {
+              enumerable: true,
+              get: function () {
+                if (exp === 'default') {
+                  return x.__esModule ? x.default : x;
+                }
+                return x[exp];
+              },
+            });
+          }
+        });
+        return m;
+      }
+      return newRequire(res);
+    }
+
+    function resolve(x) {
+      var id = modules[name][1][x];
+      return id != null ? id : x;
+    }
+  }
+
+  function Module(moduleName) {
+    this.id = moduleName;
+    this.bundle = newRequire;
+    this.require = nodeRequire;
+    this.exports = {};
+  }
+
+  newRequire.isParcelRequire = true;
+  newRequire.Module = Module;
+  newRequire.modules = modules;
+  newRequire.cache = cache;
+  newRequire.parent = previousRequire;
+  newRequire.distDir = distDir;
+  newRequire.publicUrl = publicUrl;
+  newRequire.devServer = devServer;
+  newRequire.i = importMap;
+  newRequire.register = function (id, exports) {
+    modules[id] = [
+      function (require, module) {
+        module.exports = exports;
+      },
+      {},
+    ];
+  };
+
+  // Only insert newRequire.load when it is actually used.
+  // The code in this file is linted against ES5, so dynamic import is not allowed.
+  // INSERT_LOAD_HERE
+
+  Object.defineProperty(newRequire, 'root', {
+    get: function () {
+      return globalObject[parcelRequireName];
+    },
+  });
+
+  globalObject[parcelRequireName] = newRequire;
+
+  for (var i = 0; i < entry.length; i++) {
+    newRequire(entry[i]);
+  }
+
+  if (mainEntry) {
+    // Expose entry point to Node, AMD or browser globals
+    // Based on https://github.com/ForbesLindesay/umd/blob/master/template.js
+    var mainExports = newRequire(mainEntry);
+
+    // CommonJS
+    if (typeof exports === 'object' && typeof module !== 'undefined') {
+      module.exports = mainExports;
+
+      // RequireJS
+    } else if (typeof define === 'function' && define.amd) {
+      define(function () {
+        return mainExports;
+      });
+    }
+  }
+})({"6nWMv":[function(require,module,exports,__globalThis) {
+var global = arguments[3];
+var HMR_HOST = null;
+var HMR_PORT = null;
+var HMR_SERVER_PORT = 1234;
+var HMR_SECURE = false;
+var HMR_ENV_HASH = "d6ea1d42532a7575";
+var HMR_USE_SSE = false;
+module.bundle.HMR_BUNDLE_ID = "890e741a975ef6c8";
+"use strict";
+/* global HMR_HOST, HMR_PORT, HMR_SERVER_PORT, HMR_ENV_HASH, HMR_SECURE, HMR_USE_SSE, chrome, browser, __parcel__import__, __parcel__importScripts__, ServiceWorkerGlobalScope */ /*::
+import type {
+  HMRAsset,
+  HMRMessage,
+} from '@parcel/reporter-dev-server/src/HMRServer.js';
+interface ParcelRequire {
+  (string): mixed;
+  cache: {|[string]: ParcelModule|};
+  hotData: {|[string]: mixed|};
+  Module: any;
+  parent: ?ParcelRequire;
+  isParcelRequire: true;
+  modules: {|[string]: [Function, {|[string]: string|}]|};
+  HMR_BUNDLE_ID: string;
+  root: ParcelRequire;
+}
+interface ParcelModule {
+  hot: {|
+    data: mixed,
+    accept(cb: (Function) => void): void,
+    dispose(cb: (mixed) => void): void,
+    // accept(deps: Array<string> | string, cb: (Function) => void): void,
+    // decline(): void,
+    _acceptCallbacks: Array<(Function) => void>,
+    _disposeCallbacks: Array<(mixed) => void>,
+  |};
+}
+interface ExtensionContext {
+  runtime: {|
+    reload(): void,
+    getURL(url: string): string;
+    getManifest(): {manifest_version: number, ...};
+  |};
+}
+declare var module: {bundle: ParcelRequire, ...};
+declare var HMR_HOST: string;
+declare var HMR_PORT: string;
+declare var HMR_SERVER_PORT: string;
+declare var HMR_ENV_HASH: string;
+declare var HMR_SECURE: boolean;
+declare var HMR_USE_SSE: boolean;
+declare var chrome: ExtensionContext;
+declare var browser: ExtensionContext;
+declare var __parcel__import__: (string) => Promise<void>;
+declare var __parcel__importScripts__: (string) => Promise<void>;
+declare var globalThis: typeof self;
+declare var ServiceWorkerGlobalScope: Object;
+*/ var OVERLAY_ID = '__parcel__error__overlay__';
+var OldModule = module.bundle.Module;
+function Module(moduleName) {
+    OldModule.call(this, moduleName);
+    this.hot = {
+        data: module.bundle.hotData[moduleName],
+        _acceptCallbacks: [],
+        _disposeCallbacks: [],
+        accept: function(fn) {
+            this._acceptCallbacks.push(fn || function() {});
+        },
+        dispose: function(fn) {
+            this._disposeCallbacks.push(fn);
+        }
+    };
+    module.bundle.hotData[moduleName] = undefined;
+}
+module.bundle.Module = Module;
+module.bundle.hotData = {};
+var checkedAssets /*: {|[string]: boolean|} */ , disposedAssets /*: {|[string]: boolean|} */ , assetsToDispose /*: Array<[ParcelRequire, string]> */ , assetsToAccept /*: Array<[ParcelRequire, string]> */ , bundleNotFound = false;
+function getHostname() {
+    return HMR_HOST || (typeof location !== 'undefined' && location.protocol.indexOf('http') === 0 ? location.hostname : 'localhost');
+}
+function getPort() {
+    return HMR_PORT || (typeof location !== 'undefined' ? location.port : HMR_SERVER_PORT);
+}
+// eslint-disable-next-line no-redeclare
+let WebSocket = globalThis.WebSocket;
+if (!WebSocket && typeof module.bundle.root === 'function') try {
+    // eslint-disable-next-line no-global-assign
+    WebSocket = module.bundle.root('ws');
+} catch  {
+// ignore.
+}
+var hostname = getHostname();
+var port = getPort();
+var protocol = HMR_SECURE || typeof location !== 'undefined' && location.protocol === 'https:' && ![
+    'localhost',
+    '127.0.0.1',
+    '0.0.0.0'
+].includes(hostname) ? 'wss' : 'ws';
+// eslint-disable-next-line no-redeclare
+var parent = module.bundle.parent;
+if (!parent || !parent.isParcelRequire) {
+    // Web extension context
+    var extCtx = typeof browser === 'undefined' ? typeof chrome === 'undefined' ? null : chrome : browser;
+    // Safari doesn't support sourceURL in error stacks.
+    // eval may also be disabled via CSP, so do a quick check.
+    var supportsSourceURL = false;
+    try {
+        (0, eval)('throw new Error("test"); //# sourceURL=test.js');
+    } catch (err) {
+        supportsSourceURL = err.stack.includes('test.js');
+    }
+    var ws;
+    if (HMR_USE_SSE) ws = new EventSource('/__parcel_hmr');
+    else try {
+        // If we're running in the dev server's node runner, listen for messages on the parent port.
+        let { workerData, parentPort } = module.bundle.root('node:worker_threads') /*: any*/ ;
+        if (workerData !== null && workerData !== void 0 && workerData.__parcel) {
+            parentPort.on('message', async (message)=>{
+                try {
+                    await handleMessage(message);
+                    parentPort.postMessage('updated');
+                } catch  {
+                    parentPort.postMessage('restart');
+                }
+            });
+            // After the bundle has finished running, notify the dev server that the HMR update is complete.
+            queueMicrotask(()=>parentPort.postMessage('ready'));
+        }
+    } catch  {
+        if (typeof WebSocket !== 'undefined') try {
+            ws = new WebSocket(protocol + '://' + hostname + (port ? ':' + port : '') + '/');
+        } catch (err) {
+            // Ignore cloudflare workers error.
+            if (err.message && !err.message.includes('Disallowed operation called within global scope')) console.error(err.message);
+        }
+    }
+    if (ws) {
+        // $FlowFixMe
+        ws.onmessage = async function(event /*: {data: string, ...} */ ) {
+            var data /*: HMRMessage */  = JSON.parse(event.data);
+            await handleMessage(data);
+        };
+        if (ws instanceof WebSocket) {
+            ws.onerror = function(e) {
+                if (e.message) console.error(e.message);
+            };
+            ws.onclose = function() {
+                console.warn("[parcel] \uD83D\uDEA8 Connection to the HMR server was lost");
+            };
+        }
+    }
+}
+async function handleMessage(data /*: HMRMessage */ ) {
+    checkedAssets = {} /*: {|[string]: boolean|} */ ;
+    disposedAssets = {} /*: {|[string]: boolean|} */ ;
+    assetsToAccept = [];
+    assetsToDispose = [];
+    bundleNotFound = false;
+    if (data.type === 'reload') fullReload();
+    else if (data.type === 'update') {
+        // Remove error overlay if there is one
+        if (typeof document !== 'undefined') removeErrorOverlay();
+        let assets = data.assets;
+        // Handle HMR Update
+        let handled = assets.every((asset)=>{
+            return asset.type === 'css' || asset.type === 'js' && hmrAcceptCheck(module.bundle.root, asset.id, asset.depsByBundle);
+        });
+        // Dispatch a custom event in case a bundle was not found. This might mean
+        // an asset on the server changed and we should reload the page. This event
+        // gives the client an opportunity to refresh without losing state
+        // (e.g. via React Server Components). If e.preventDefault() is not called,
+        // we will trigger a full page reload.
+        if (handled && bundleNotFound && assets.some((a)=>a.envHash !== HMR_ENV_HASH) && typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') handled = !window.dispatchEvent(new CustomEvent('parcelhmrreload', {
+            cancelable: true
+        }));
+        if (handled) {
+            console.clear();
+            // Dispatch custom event so other runtimes (e.g React Refresh) are aware.
+            if (typeof window !== 'undefined' && typeof CustomEvent !== 'undefined') window.dispatchEvent(new CustomEvent('parcelhmraccept'));
+            await hmrApplyUpdates(assets);
+            hmrDisposeQueue();
+            // Run accept callbacks. This will also re-execute other disposed assets in topological order.
+            let processedAssets = {};
+            for(let i = 0; i < assetsToAccept.length; i++){
+                let id = assetsToAccept[i][1];
+                if (!processedAssets[id]) {
+                    hmrAccept(assetsToAccept[i][0], id);
+                    processedAssets[id] = true;
+                }
+            }
+        } else fullReload();
+    }
+    if (data.type === 'error') {
+        // Log parcel errors to console
+        for (let ansiDiagnostic of data.diagnostics.ansi){
+            let stack = ansiDiagnostic.codeframe ? ansiDiagnostic.codeframe : ansiDiagnostic.stack;
+            console.error("\uD83D\uDEA8 [parcel]: " + ansiDiagnostic.message + '\n' + stack + '\n\n' + ansiDiagnostic.hints.join('\n'));
+        }
+        if (typeof document !== 'undefined') {
+            // Render the fancy html overlay
+            removeErrorOverlay();
+            var overlay = createErrorOverlay(data.diagnostics.html);
+            // $FlowFixMe
+            document.body.appendChild(overlay);
+        }
+    }
+}
+function removeErrorOverlay() {
+    var overlay = document.getElementById(OVERLAY_ID);
+    if (overlay) {
+        overlay.remove();
+        console.log("[parcel] \u2728 Error resolved");
+    }
+}
+function createErrorOverlay(diagnostics) {
+    var overlay = document.createElement('div');
+    overlay.id = OVERLAY_ID;
+    let errorHTML = '<div style="background: black; opacity: 0.85; font-size: 16px; color: white; position: fixed; height: 100%; width: 100%; top: 0px; left: 0px; padding: 30px; font-family: Menlo, Consolas, monospace; z-index: 9999;">';
+    for (let diagnostic of diagnostics){
+        let stack = diagnostic.frames.length ? diagnostic.frames.reduce((p, frame)=>{
+            return `${p}
+<a href="${protocol === 'wss' ? 'https' : 'http'}://${hostname}:${port}/__parcel_launch_editor?file=${encodeURIComponent(frame.location)}" style="text-decoration: underline; color: #888" onclick="fetch(this.href); return false">${frame.location}</a>
+${frame.code}`;
+        }, '') : diagnostic.stack;
+        errorHTML += `
+      <div>
+        <div style="font-size: 18px; font-weight: bold; margin-top: 20px;">
+          \u{1F6A8} ${diagnostic.message}
+        </div>
+        <pre>${stack}</pre>
+        <div>
+          ${diagnostic.hints.map((hint)=>"<div>\uD83D\uDCA1 " + hint + '</div>').join('')}
+        </div>
+        ${diagnostic.documentation ? `<div>\u{1F4DD} <a style="color: violet" href="${diagnostic.documentation}" target="_blank">Learn more</a></div>` : ''}
+      </div>
+    `;
+    }
+    errorHTML += '</div>';
+    overlay.innerHTML = errorHTML;
+    return overlay;
+}
+function fullReload() {
+    if (typeof location !== 'undefined' && 'reload' in location) location.reload();
+    else if (typeof extCtx !== 'undefined' && extCtx && extCtx.runtime && extCtx.runtime.reload) extCtx.runtime.reload();
+    else try {
+        let { workerData, parentPort } = module.bundle.root('node:worker_threads') /*: any*/ ;
+        if (workerData !== null && workerData !== void 0 && workerData.__parcel) parentPort.postMessage('restart');
+    } catch (err) {
+        console.error("[parcel] \u26A0\uFE0F An HMR update was not accepted. Please restart the process.");
+    }
+}
+function getParents(bundle, id) /*: Array<[ParcelRequire, string]> */ {
+    var modules = bundle.modules;
+    if (!modules) return [];
+    var parents = [];
+    var k, d, dep;
+    for(k in modules)for(d in modules[k][1]){
+        dep = modules[k][1][d];
+        if (dep === id || Array.isArray(dep) && dep[dep.length - 1] === id) parents.push([
+            bundle,
+            k
+        ]);
+    }
+    if (bundle.parent) parents = parents.concat(getParents(bundle.parent, id));
+    return parents;
+}
+function updateLink(link) {
+    var href = link.getAttribute('href');
+    if (!href) return;
+    var newLink = link.cloneNode();
+    newLink.onload = function() {
+        if (link.parentNode !== null) // $FlowFixMe
+        link.parentNode.removeChild(link);
+    };
+    newLink.setAttribute('href', // $FlowFixMe
+    href.split('?')[0] + '?' + Date.now());
+    // $FlowFixMe
+    link.parentNode.insertBefore(newLink, link.nextSibling);
+}
+var cssTimeout = null;
+function reloadCSS() {
+    if (cssTimeout || typeof document === 'undefined') return;
+    cssTimeout = setTimeout(function() {
+        var links = document.querySelectorAll('link[rel="stylesheet"]');
+        for(var i = 0; i < links.length; i++){
+            // $FlowFixMe[incompatible-type]
+            var href /*: string */  = links[i].getAttribute('href');
+            var hostname = getHostname();
+            var servedFromHMRServer = hostname === 'localhost' ? new RegExp('^(https?:\\/\\/(0.0.0.0|127.0.0.1)|localhost):' + getPort()).test(href) : href.indexOf(hostname + ':' + getPort());
+            var absolute = /^https?:\/\//i.test(href) && href.indexOf(location.origin) !== 0 && !servedFromHMRServer;
+            if (!absolute) updateLink(links[i]);
+        }
+        cssTimeout = null;
+    }, 50);
+}
+function hmrDownload(asset) {
+    if (asset.type === 'js') {
+        if (typeof document !== 'undefined') {
+            let script = document.createElement('script');
+            script.src = asset.url + '?t=' + Date.now();
+            if (asset.outputFormat === 'esmodule') script.type = 'module';
+            return new Promise((resolve, reject)=>{
+                var _document$head;
+                script.onload = ()=>resolve(script);
+                script.onerror = reject;
+                (_document$head = document.head) === null || _document$head === void 0 || _document$head.appendChild(script);
+            });
+        } else if (typeof importScripts === 'function') {
+            // Worker scripts
+            if (asset.outputFormat === 'esmodule') return import(asset.url + '?t=' + Date.now());
+            else return new Promise((resolve, reject)=>{
+                try {
+                    importScripts(asset.url + '?t=' + Date.now());
+                    resolve();
+                } catch (err) {
+                    reject(err);
+                }
+            });
+        }
+    }
+}
+async function hmrApplyUpdates(assets) {
+    global.parcelHotUpdate = Object.create(null);
+    let scriptsToRemove;
+    try {
+        // If sourceURL comments aren't supported in eval, we need to load
+        // the update from the dev server over HTTP so that stack traces
+        // are correct in errors/logs. This is much slower than eval, so
+        // we only do it if needed (currently just Safari).
+        // https://bugs.webkit.org/show_bug.cgi?id=137297
+        // This path is also taken if a CSP disallows eval.
+        if (!supportsSourceURL) {
+            let promises = assets.map((asset)=>{
+                var _hmrDownload;
+                return (_hmrDownload = hmrDownload(asset)) === null || _hmrDownload === void 0 ? void 0 : _hmrDownload.catch((err)=>{
+                    // Web extension fix
+                    if (extCtx && extCtx.runtime && extCtx.runtime.getManifest().manifest_version == 3 && typeof ServiceWorkerGlobalScope != 'undefined' && global instanceof ServiceWorkerGlobalScope) {
+                        extCtx.runtime.reload();
+                        return;
+                    }
+                    throw err;
+                });
+            });
+            scriptsToRemove = await Promise.all(promises);
+        }
+        assets.forEach(function(asset) {
+            hmrApply(module.bundle.root, asset);
+        });
+    } finally{
+        delete global.parcelHotUpdate;
+        if (scriptsToRemove) scriptsToRemove.forEach((script)=>{
+            if (script) {
+                var _document$head2;
+                (_document$head2 = document.head) === null || _document$head2 === void 0 || _document$head2.removeChild(script);
+            }
+        });
+    }
+}
+function hmrApply(bundle /*: ParcelRequire */ , asset /*:  HMRAsset */ ) {
+    var modules = bundle.modules;
+    if (!modules) return;
+    if (asset.type === 'css') reloadCSS();
+    else if (asset.type === 'js') {
+        let deps = asset.depsByBundle[bundle.HMR_BUNDLE_ID];
+        if (deps) {
+            if (modules[asset.id]) {
+                // Remove dependencies that are removed and will become orphaned.
+                // This is necessary so that if the asset is added back again, the cache is gone, and we prevent a full page reload.
+                let oldDeps = modules[asset.id][1];
+                for(let dep in oldDeps)if (!deps[dep] || deps[dep] !== oldDeps[dep]) {
+                    let id = oldDeps[dep];
+                    let parents = getParents(module.bundle.root, id);
+                    if (parents.length === 1) hmrDelete(module.bundle.root, id);
+                }
+            }
+            if (supportsSourceURL) // Global eval. We would use `new Function` here but browser
+            // support for source maps is better with eval.
+            (0, eval)(asset.output);
+            // $FlowFixMe
+            let fn = global.parcelHotUpdate[asset.id];
+            modules[asset.id] = [
+                fn,
+                deps
+            ];
+        }
+        // Always traverse to the parent bundle, even if we already replaced the asset in this bundle.
+        // This is required in case modules are duplicated. We need to ensure all instances have the updated code.
+        if (bundle.parent) hmrApply(bundle.parent, asset);
+    }
+}
+function hmrDelete(bundle, id) {
+    let modules = bundle.modules;
+    if (!modules) return;
+    if (modules[id]) {
+        // Collect dependencies that will become orphaned when this module is deleted.
+        let deps = modules[id][1];
+        let orphans = [];
+        for(let dep in deps){
+            let parents = getParents(module.bundle.root, deps[dep]);
+            if (parents.length === 1) orphans.push(deps[dep]);
+        }
+        // Delete the module. This must be done before deleting dependencies in case of circular dependencies.
+        delete modules[id];
+        delete bundle.cache[id];
+        // Now delete the orphans.
+        orphans.forEach((id)=>{
+            hmrDelete(module.bundle.root, id);
+        });
+    } else if (bundle.parent) hmrDelete(bundle.parent, id);
+}
+function hmrAcceptCheck(bundle /*: ParcelRequire */ , id /*: string */ , depsByBundle /*: ?{ [string]: { [string]: string } }*/ ) {
+    checkedAssets = {};
+    if (hmrAcceptCheckOne(bundle, id, depsByBundle)) return true;
+    // Traverse parents breadth first. All possible ancestries must accept the HMR update, or we'll reload.
+    let parents = getParents(module.bundle.root, id);
+    let accepted = false;
+    while(parents.length > 0){
+        let v = parents.shift();
+        let a = hmrAcceptCheckOne(v[0], v[1], null);
+        if (a) // If this parent accepts, stop traversing upward, but still consider siblings.
+        accepted = true;
+        else if (a !== null) {
+            // Otherwise, queue the parents in the next level upward.
+            let p = getParents(module.bundle.root, v[1]);
+            if (p.length === 0) {
+                // If there are no parents, then we've reached an entry without accepting. Reload.
+                accepted = false;
+                break;
+            }
+            parents.push(...p);
+        }
+    }
+    return accepted;
+}
+function hmrAcceptCheckOne(bundle /*: ParcelRequire */ , id /*: string */ , depsByBundle /*: ?{ [string]: { [string]: string } }*/ ) {
+    var modules = bundle.modules;
+    if (!modules) return;
+    if (depsByBundle && !depsByBundle[bundle.HMR_BUNDLE_ID]) {
+        // If we reached the root bundle without finding where the asset should go,
+        // there's nothing to do. Mark as "accepted" so we don't reload the page.
+        if (!bundle.parent) {
+            bundleNotFound = true;
+            return true;
+        }
+        return hmrAcceptCheckOne(bundle.parent, id, depsByBundle);
+    }
+    if (checkedAssets[id]) return null;
+    checkedAssets[id] = true;
+    var cached = bundle.cache[id];
+    if (!cached) return true;
+    assetsToDispose.push([
+        bundle,
+        id
+    ]);
+    if (cached && cached.hot && cached.hot._acceptCallbacks.length) {
+        assetsToAccept.push([
+            bundle,
+            id
+        ]);
+        return true;
+    }
+    return false;
+}
+function hmrDisposeQueue() {
+    // Dispose all old assets.
+    for(let i = 0; i < assetsToDispose.length; i++){
+        let id = assetsToDispose[i][1];
+        if (!disposedAssets[id]) {
+            hmrDispose(assetsToDispose[i][0], id);
+            disposedAssets[id] = true;
+        }
+    }
+    assetsToDispose = [];
+}
+function hmrDispose(bundle /*: ParcelRequire */ , id /*: string */ ) {
+    var cached = bundle.cache[id];
+    bundle.hotData[id] = {};
+    if (cached && cached.hot) cached.hot.data = bundle.hotData[id];
+    if (cached && cached.hot && cached.hot._disposeCallbacks.length) cached.hot._disposeCallbacks.forEach(function(cb) {
+        cb(bundle.hotData[id]);
+    });
+    delete bundle.cache[id];
+}
+function hmrAccept(bundle /*: ParcelRequire */ , id /*: string */ ) {
+    // Execute the module.
+    bundle(id);
+    // Run the accept callbacks in the new version of the module.
+    var cached = bundle.cache[id];
+    if (cached && cached.hot && cached.hot._acceptCallbacks.length) {
+        let assetsToAlsoAccept = [];
+        cached.hot._acceptCallbacks.forEach(function(cb) {
+            let additionalAssets = cb(function() {
+                return getParents(module.bundle.root, id);
+            });
+            if (Array.isArray(additionalAssets) && additionalAssets.length) assetsToAlsoAccept.push(...additionalAssets);
+        });
+        if (assetsToAlsoAccept.length) {
+            let handled = assetsToAlsoAccept.every(function(a) {
+                return hmrAcceptCheck(a[0], a[1]);
+            });
+            if (!handled) return fullReload();
+            hmrDisposeQueue();
+        }
+    }
+}
+
+},{}],"8lqZg":[function(require,module,exports,__globalThis) {
+var _navJs = require("./nav.js");
+var _announcementsJs = require("./announcements.js");
+var _modalJs = require("./modal.js");
+var _accordionJs = require("./accordion.js");
+var _collapsibleJs = require("./collapsible.js");
+var _dropdownJs = require("./dropdown.js");
+var _variablesJs = require("./variables.js");
+var _cityJs = require("./city.js");
+var _cityVisibilityJs = require("./city-visibility.js");
+var _locationJs = require("./location.js");
+var _studiosSearchRedirectJs = require("./studios-search-redirect.js");
+var _sliderJs = require("./slider.js");
+var _tabJs = require("./tab.js");
+var _visualVideoJs = require("./visual-video.js");
+
+},{"./nav.js":"i5JEn","./announcements.js":"2rNzt","./modal.js":"3xjKI","./accordion.js":"0392A","./collapsible.js":"fkbji","./dropdown.js":"6GCUi","./variables.js":"1KIEs","./city.js":"alcnd","./city-visibility.js":"fwmRP","./location.js":"WOwQU","./studios-search-redirect.js":"eacga","./slider.js":"f7KXl","./tab.js":"1ivZR","./visual-video.js":"2alcq"}],"i5JEn":[function(require,module,exports,__globalThis) {
+/**
+ * Nav Component
+ *
+ * Two independent nav behaviors:
+ *   1. Skip-to-main link — focuses <main> for accessibility
+ *   2. Scroll state — adds is-scroll-top / is-scroll-up / is-scroll-down
+ *      classes based on direction, with a distance threshold
+ *      to prevent flicker from jitter. Opt-in per component via
+ *      data-hide-on-scroll.
+ *
+ * Usage in Webflow:
+ *   <div class="nav_component">
+ *     <a class="nav_skip_wrap" href="#main">Skip to content</a>
+ *   </div>
+ *   <main>...</main>
+ *
+ * Enable scroll state on a nav:
+ *   <div class="nav_component" data-hide-on-scroll>
+ *
+ * Optional per-component threshold override:
+ *   <div class="nav_component" data-hide-on-scroll data-scroll-threshold="20">
+ *
+ *
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Public API ───────────────────────────────────────────────
+/**
+ * Initialize all nav behaviors. Safe to call multiple times —
+ * already-initialized elements are skipped via dataset flag.
+ */ parcelHelpers.export(exports, "initNav", ()=>initNav);
+var _utilsJs = require("./utils.js");
+// ── Module-level constants ───────────────────────────────────
+const SCROLL_TRIGGER_THRESHOLD = 100;
+const DEFAULT_DIRECTION_THRESHOLD = 16; // px to scroll before flipping direction
+// ── Skip link ────────────────────────────────────────────────
+function initSkipLink() {
+    const target = document.querySelector("main");
+    if (!target) return;
+    document.querySelectorAll(".nav_skip_wrap").forEach((link)=>{
+        const el = /** @type {HTMLElement} */ link;
+        if (el.dataset.scriptInitialized) return;
+        el.dataset.scriptInitialized = "true";
+        link.addEventListener("click", ()=>{
+            // tabindex=-1 makes <main> programmatically focusable without
+            // adding it to the natural tab order
+            target.setAttribute("tabindex", "-1");
+            /** @type {HTMLElement} */ target.focus();
+            // Clean up after focus moves away so the DOM isn't permanently mutated
+            target.addEventListener("blur", ()=>target.removeAttribute("tabindex"), {
+                once: true
+            });
+        });
+    });
+}
+// ── Scroll state ─────────────────────────────────────────────
+function initScrollState() {
+    const components = document.querySelectorAll(".nav_component[data-hide-on-scroll]");
+    if (!components.length) return;
+    // Initial state based on current scroll position
+    const initialAtTop = window.scrollY <= SCROLL_TRIGGER_THRESHOLD;
+    components.forEach((c)=>{
+        c.classList.add(initialAtTop ? "is-scroll-top" : "is-scroll-down");
+    });
+    // ── Per-component state ────────────────────────────────
+    /** @typedef {{ el: HTMLElement, threshold: number, committed: -1 | 0 | 1, pivotY: number }} NavState */ /** @type {NavState[]} */ const states = [];
+    components.forEach((component)=>{
+        const el = /** @type {HTMLElement} */ component;
+        if (el.dataset.scriptInitialized) return;
+        el.dataset.scriptInitialized = "true";
+        states.push({
+            el,
+            threshold: (0, _utilsJs.attrNum)(el, "data-scroll-threshold", DEFAULT_DIRECTION_THRESHOLD),
+            committed: initialAtTop ? 0 : 1,
+            pivotY: window.scrollY
+        });
+    });
+    if (!states.length) return;
+    // ── Shared scroll handler (one listener for all nav components) ──
+    let ticking = false;
+    const update = ()=>{
+        ticking = false;
+        const currentY = window.scrollY;
+        for (const state of states){
+            // Top-of-page: above the trigger threshold → enforce is-scroll-top
+            if (currentY <= SCROLL_TRIGGER_THRESHOLD) {
+                if (state.committed !== 0) {
+                    state.el.classList.remove("is-scroll-up", "is-scroll-down");
+                    state.el.classList.add("is-scroll-top");
+                    state.committed = 0;
+                    state.pivotY = currentY;
+                }
+                continue;
+            }
+            // Past trigger point — measure delta against pivot
+            const delta = currentY - state.pivotY;
+            if (Math.abs(delta) < state.threshold) continue;
+            const newDirection = delta > 0 ? 1 : -1;
+            if (newDirection !== state.committed) {
+                state.committed = newDirection;
+                state.el.classList.toggle("is-scroll-up", newDirection === -1);
+                state.el.classList.toggle("is-scroll-down", newDirection === 1);
+                state.el.classList.remove("is-scroll-top");
+            }
+            state.pivotY = currentY;
+        }
+    };
+    // rAF-throttled scroll listener — one rAF call per frame max,
+    // regardless of how many scroll events fire
+    const onScroll = ()=>{
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(update);
+    };
+    window.addEventListener("scroll", onScroll, {
+        passive: true
+    });
+}
+function initNav() {
+    initSkipLink();
+    initScrollState();
+}
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initNav, {
+    once: true
+});
+else initNav();
+
+},{"./utils.js":"en4he","@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"en4he":[function(require,module,exports,__globalThis) {
+/**
+ * Shared utilities for Webflow custom-script components.
+ *
+ * Centralized here so behavioral fixes (e.g. how to detect a
+ * Finsweet-managed list, what counts as a truthy Webflow attribute)
+ * stay consistent across all components.
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "FINSWEET_SELECTORS", ()=>FINSWEET_SELECTORS);
+/**
+ * Parses a Webflow boolean attribute. Webflow emits "True"/"False"
+ * literals; we also accept lowercase for hand-authored markup.
+ *
+ * @param {HTMLElement} el
+ * @param {string} attr
+ * @param {boolean} [defaultValue]
+ */ parcelHelpers.export(exports, "attrBool", ()=>attrBool);
+/**
+ * @param {HTMLElement} el
+ * @param {string} attr
+ * @param {number} defaultValue
+ */ parcelHelpers.export(exports, "attrNum", ()=>attrNum);
+/**
+ * Unwrap `.u-display-contents` wrappers inside a slot, but stop if
+ * the wrapper is a Finsweet-managed CMS list — Finsweet keeps
+ * references to those elements and breaks if we mutate them.
+ *
+ * @param {HTMLElement | null} slot
+ */ parcelHelpers.export(exports, "flattenDisplayContents", ()=>flattenDisplayContents);
+/**
+ * Flatten a static Webflow CMS list into its parent slot, hoisting
+ * each item's first visible child up. Leaves Finsweet-managed lists
+ * untouched.
+ *
+ * @param {HTMLElement | null} slot
+ */ parcelHelpers.export(exports, "removeCMSList", ()=>removeCMSList);
+const FINSWEET_SELECTORS = "[fs-list-element], [fs-list-nest], [fs-list-instance]";
+function attrBool(el, attr, defaultValue = false) {
+    const v = el.getAttribute(attr);
+    if (v === null) return defaultValue;
+    return v === "True" || v === "true";
+}
+function attrNum(el, attr, defaultValue) {
+    const v = parseFloat(el.getAttribute(attr) || "");
+    return Number.isFinite(v) ? v : defaultValue;
+}
+function flattenDisplayContents(slot) {
+    if (!slot) return;
+    let child = slot.firstElementChild;
+    while(child && child.classList.contains("u-display-contents")){
+        const isCMSList = child.classList.contains("w-dyn-list");
+        const hasFinsweet = child.hasAttribute("fs-list-element") || child.querySelector(FINSWEET_SELECTORS);
+        if (isCMSList || hasFinsweet) break;
+        while(child.firstChild)slot.insertBefore(child.firstChild, child);
+        slot.removeChild(child);
+        child = slot.firstElementChild;
+    }
+}
+function removeCMSList(slot) {
+    if (!slot) return;
+    const dynList = Array.from(slot.children).find((child)=>child.classList.contains("w-dyn-list"));
+    if (!dynList) return;
+    const dynListIsFinsweet = dynList.hasAttribute("fs-list-element") || dynList.querySelector(FINSWEET_SELECTORS);
+    if (dynListIsFinsweet) return;
+    const nestedItems = dynList.querySelector(".w-dyn-items")?.children;
+    if (!nestedItems) return;
+    const staticWrapper = [
+        ...slot.children
+    ];
+    [
+        ...nestedItems
+    ].forEach((el)=>{
+        const c = [
+            ...el.children
+        ].find((child)=>!child.classList.contains("w-condition-invisible"));
+        if (c) slot.appendChild(c);
+    });
+    staticWrapper.forEach((el)=>el.remove());
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"4PAvJ":[function(require,module,exports,__globalThis) {
+exports.interopDefault = function(a) {
+    return a && a.__esModule ? a : {
+        default: a
+    };
+};
+exports.defineInteropFlag = function(a) {
+    Object.defineProperty(a, '__esModule', {
+        value: true
+    });
+};
+exports.exportAll = function(source, dest) {
+    Object.keys(source).forEach(function(key) {
+        if (key === 'default' || key === '__esModule' || Object.prototype.hasOwnProperty.call(dest, key)) return;
+        Object.defineProperty(dest, key, {
+            enumerable: true,
+            get: function() {
+                return source[key];
+            }
+        });
+    });
+    return dest;
+};
+exports.export = function(dest, destName, get) {
+    Object.defineProperty(dest, destName, {
+        enumerable: true,
+        get: get
+    });
+};
+
+},{}],"2rNzt":[function(require,module,exports,__globalThis) {
+/**
+ * Per-slug session-scoped dismissal for CMS announcement items.
+ * Marks dismissed items with `data-announcement-dismissed`; project CSS
+ * owns visibility and any parent collapse (e.g. via `:has()`).
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/** Initialize announcement dismissal (idempotent). */ parcelHelpers.export(exports, "initAnnouncements", ()=>initAnnouncements);
+const DISMISSED_STORAGE_KEY = "dismissed-announcements";
+const ANNOUNCEMENT_SLUG_ATTR = "data-announcement-slug";
+const DISMISSED_ATTR = "data-announcement-dismissed";
+const ITEM_SELECTOR = '[data-announcement-element="item"]';
+const DISMISS_SELECTOR = '[data-announcement-element="dismiss"]';
+/** @returns {Set<string>} */ function readDismissedSlugs() {
+    try {
+        const raw = sessionStorage.getItem(DISMISSED_STORAGE_KEY);
+        if (!raw) return new Set();
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? new Set(parsed.filter((s)=>typeof s === "string")) : new Set();
+    } catch (_) {
+        return new Set();
+    }
+}
+/** @param {Set<string>} set */ function writeDismissedSlugs(set) {
+    try {
+        sessionStorage.setItem(DISMISSED_STORAGE_KEY, JSON.stringify([
+            ...set
+        ]));
+    } catch (_) {
+    /* storage blocked — dismissal still applies for this page view */ }
+}
+const dismissedSlugs = readDismissedSlugs();
+// Must run before DOM paint so dismissed items never flash.
+(function injectDismissedHideStyles() {
+    if (!dismissedSlugs.size) return;
+    const rules = [
+        ...dismissedSlugs
+    ].map((slug)=>`[${ANNOUNCEMENT_SLUG_ATTR}="${CSS.escape(slug)}"]{display:none !important;}`).join("");
+    const style = document.createElement("style");
+    style.setAttribute("data-announcement-hide", "");
+    style.textContent = rules;
+    (document.head || document.documentElement).appendChild(style);
+})();
+function initAnnouncements() {
+    document.querySelectorAll(ITEM_SELECTOR).forEach(initItem);
+}
+/** @param {Element} item */ function initItem(item) {
+    const el = /** @type {HTMLElement} */ item;
+    if (el.dataset.scriptInitialized) return;
+    const slug = el.getAttribute(ANNOUNCEMENT_SLUG_ATTR);
+    if (!slug) return;
+    el.dataset.scriptInitialized = "true";
+    if (dismissedSlugs.has(slug)) {
+        el.setAttribute(DISMISSED_ATTR, "");
+        return;
+    }
+    const dismissButton = el.querySelector(DISMISS_SELECTOR);
+    if (!dismissButton) return;
+    dismissButton.addEventListener("click", ()=>{
+        dismissedSlugs.add(slug);
+        writeDismissedSlugs(dismissedSlugs);
+        el.setAttribute(DISMISSED_ATTR, "");
+    });
+}
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAnnouncements, {
+    once: true
+});
+else initAnnouncements();
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"3xjKI":[function(require,module,exports,__globalThis) {
+/**
+ * Modal Component
+ *
+ * Activates `<dialog data-modal-element="dialog">` elements with Web Animations
+ * API open/close animations. The `data-wf--modal--variant` attribute picks the
+ * animation style — "side-panel", "full-screen", or default (centered).
+ *
+ * Triggers:
+ *   - Elements: [data-modal-trigger="<id>"]
+ *   - Anchors:  a[href="#<id>"]
+ *   - URL:      ?modal-id=<id> on initial load (param is stripped after open)
+ *
+ * Optional integrations (detected at runtime — no hard dependency):
+ *   - lenis for scroll-lock
+ *
+ * Exposes a global registry at `window.bruce.modal`:
+ *   open(id), closeAll(), list (per-id { open, close })
+ *
+ * Webflow markup (style with whatever classes you want):
+ *   <dialog data-modal-element="dialog"
+ *           data-modal-target="my-id"
+ *           data-wf--modal--variant="side-panel">
+ *     <div data-modal-element="backdrop" data-modal-close></div>
+ *     <div data-modal-element="content">
+ *       <div data-modal-element="slot">…</div>
+ *     </div>
+ *   </dialog>
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Init ─────────────────────────────────────────────────────
+/** Initialize all modal dialogs. Safe to call multiple times. */ parcelHelpers.export(exports, "initModals", ()=>initModals);
+const M = {
+    dialog: '[data-modal-element="dialog"]',
+    backdrop: '[data-modal-element="backdrop"]',
+    content: '[data-modal-element="content"]',
+    slot: '[data-modal-element="slot"]'
+};
+const VARIANT = {
+    SIDE_PANEL: "side-panel",
+    FULL_SCREEN: "full-screen"
+};
+const EASING_OUT = "cubic-bezier(0.16, 1, 0.3, 1)";
+// Per-variant animation specs in the OPEN direction. Each entry pairs an
+// element with the keyframes that take it from its closed pose to its open
+// pose. Closing reverses the same animations in place via playbackRate.
+function buildSpecs(variant, backdrop, content, slot) {
+    if (variant === VARIANT.SIDE_PANEL) return [
+        backdrop && {
+            el: backdrop,
+            kf: [
+                {
+                    opacity: 0
+                },
+                {
+                    opacity: 1
+                }
+            ],
+            opts: {
+                duration: 300,
+                easing: EASING_OUT
+            }
+        },
+        content && {
+            el: content,
+            kf: [
+                {
+                    transform: "translateX(100%)"
+                },
+                {
+                    transform: "translateX(0)"
+                }
+            ],
+            opts: {
+                duration: 300,
+                easing: EASING_OUT
+            }
+        }
+    ].filter(Boolean);
+    if (variant === VARIANT.FULL_SCREEN) return [
+        // Backdrop stays hidden for full-screen — the content covers the viewport.
+        backdrop && {
+            el: backdrop,
+            kf: [
+                {
+                    opacity: 0
+                },
+                {
+                    opacity: 0
+                }
+            ],
+            opts: {
+                duration: 200
+            }
+        },
+        content && {
+            el: content,
+            kf: [
+                {
+                    opacity: 0
+                },
+                {
+                    opacity: 1
+                }
+            ],
+            opts: {
+                duration: 200,
+                easing: EASING_OUT
+            }
+        },
+        slot && {
+            el: slot,
+            kf: [
+                {
+                    opacity: 0,
+                    transform: "translateY(2rem)"
+                },
+                {
+                    opacity: 1,
+                    transform: "translateY(0)"
+                }
+            ],
+            opts: {
+                duration: 200,
+                delay: 100,
+                easing: EASING_OUT
+            }
+        }
+    ].filter(Boolean);
+    // default — centered. Subtle fade + small rise from below.
+    return [
+        backdrop && {
+            el: backdrop,
+            kf: [
+                {
+                    opacity: 0
+                },
+                {
+                    opacity: 1
+                }
+            ],
+            opts: {
+                duration: 300,
+                easing: EASING_OUT
+            }
+        },
+        content && {
+            el: content,
+            kf: [
+                {
+                    opacity: 0,
+                    transform: "translateY(8px) scale(0.97)"
+                },
+                {
+                    opacity: 1,
+                    transform: "translateY(0) scale(1)"
+                }
+            ],
+            opts: {
+                duration: 300,
+                easing: EASING_OUT
+            }
+        }
+    ].filter(Boolean);
+}
+// ── Global registry ──────────────────────────────────────────
+/** @type {any} */ window.bruce ||= {};
+const modalSystem = /** @type {any} */ window.bruce.modal ??= {
+    list: {},
+    open (id) {
+        this.list[id]?.open?.();
+    },
+    closeAll () {
+        Object.values(this.list).forEach((m)=>m.close?.());
+    }
+};
+// ── Delegated trigger click ──────────────────────────────────
+// One document-level listener routes every [data-modal-trigger] / a[href="#id"]
+// click to the matching modal — adding a per-modal listener inside initModals
+// would multiply work on every page click.
+let triggerListenerAttached = false;
+function attachTriggerListener() {
+    if (triggerListenerAttached) return;
+    triggerListenerAttached = true;
+    document.addEventListener("click", (e)=>{
+        const target = /** @type {Element | null} */ e.target;
+        if (!target) return;
+        const trigger = target.closest("[data-modal-trigger], a[href^='#']");
+        if (!trigger) return;
+        const id = trigger.getAttribute("data-modal-trigger") || trigger.getAttribute("href")?.slice(1);
+        if (!id || !modalSystem.list[id]) return;
+        if (trigger.tagName === "A") e.preventDefault();
+        modalSystem.open(id);
+    });
+}
+function initModals() {
+    attachTriggerListener();
+    document.querySelectorAll(M.dialog).forEach((modal)=>{
+        const el = /** @type {HTMLDialogElement} */ modal;
+        if (el.dataset.scriptInitialized) return;
+        el.dataset.scriptInitialized = "true";
+        const modalId = el.getAttribute("data-modal-target");
+        const variant = el.getAttribute("data-wf--modal--variant");
+        const contentEl = /** @type {HTMLElement | null} */ el.querySelector(M.content);
+        // Anchor the default-variant scale to the bottom edge so the content
+        // rises upward into place. No effect on translate-only variants.
+        if (contentEl) contentEl.style.transformOrigin = "center bottom";
+        const specs = buildSpecs(variant, el.querySelector(M.backdrop), contentEl, el.querySelector(M.slot));
+        const scrollResetEls = el.querySelectorAll("[data-modal-scroll]");
+        let lastFocusedElement;
+        /** @type {Animation[]} */ let animations = [];
+        /** @type {"open" | "close" | null} */ let direction = null;
+        // Bumped on every playClose so any stacked `.finished` handler from an
+        // earlier call can detect that it's stale and bail — prevents resetModal
+        // from running twice (duplicate modal-close events, duplicate focus).
+        let closeToken = 0;
+        const playOpen = ()=>{
+            if (direction === "open") return;
+            if (direction === "close") {
+                animations.forEach((a)=>{
+                    a.playbackRate = 1;
+                });
+                direction = "open";
+                return;
+            }
+            animations = specs.map((s)=>s.el.animate(s.kf, {
+                    ...s.opts,
+                    fill: "forwards"
+                }));
+            direction = "open";
+        };
+        const playClose = (onComplete)=>{
+            if (direction === "close") return; // an in-flight close handler will finish it
+            if (direction === "open") animations.forEach((a)=>{
+                a.playbackRate = -1;
+            });
+            else animations = specs.map((s)=>s.el.animate([
+                    s.kf[1],
+                    s.kf[0]
+                ], {
+                    ...s.opts,
+                    fill: "forwards"
+                }));
+            direction = "close";
+            if (animations.length === 0) {
+                onComplete();
+                return;
+            }
+            const myToken = ++closeToken;
+            Promise.all(animations.map((a)=>a.finished.catch(()=>null))).then(()=>{
+                if (myToken !== closeToken || direction !== "close") return;
+                // Call onComplete (which hides the dialog) BEFORE cancelling so the
+                // user never sees the brief frame where animation effects are
+                // released but the dialog is still visible.
+                onComplete();
+                animations.forEach((a)=>a.cancel());
+                animations = [];
+                direction = null;
+            });
+        };
+        function resetModal() {
+            if (typeof lenis !== "undefined" && lenis.start) lenis.start();
+            else document.body.style.overflow = "";
+            el.close();
+            if (lastFocusedElement) lastFocusedElement.focus();
+            window.dispatchEvent(new CustomEvent("modal-close", {
+                detail: {
+                    modal: el
+                }
+            }));
+        }
+        function openModal() {
+            if (typeof lenis !== "undefined" && lenis.stop) lenis.stop();
+            else document.body.style.overflow = "hidden";
+            lastFocusedElement = document.activeElement;
+            el.showModal();
+            playOpen();
+            scrollResetEls.forEach((s)=>s.scrollTop = 0);
+            window.dispatchEvent(new CustomEvent("modal-open", {
+                detail: {
+                    modal: el
+                }
+            }));
+        }
+        function closeModal() {
+            playClose(resetModal);
+        }
+        // Open via ?modal-id=… on initial load, then strip the param.
+        if (modalId && new URLSearchParams(location.search).get("modal-id") === modalId) {
+            openModal();
+            const url = new URL(location.href);
+            url.searchParams.delete("modal-id");
+            history.replaceState({}, "", url);
+        }
+        el.addEventListener("cancel", (e)=>{
+            e.preventDefault();
+            closeModal();
+        });
+        el.addEventListener("click", (e)=>{
+            if (/** @type {Element} */ e.target.closest("[data-modal-close]")) closeModal();
+        });
+        if (modalId) modalSystem.list[modalId] = {
+            open: openModal,
+            close: closeModal
+        };
+    });
+}
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initModals, {
+    once: true
+});
+else initModals();
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"0392A":[function(require,module,exports,__globalThis) {
+/**
+ * Accordion Component
+ *
+ * Expandable items inside an accordion list, animated open/closed with the
+ * Web Animations API. Each item pairs a toggle with a content slot.
+ *
+ * Per-list data attributes (read as strings; defaults shown):
+ *   - data-close-previous="True"          close the prior item when opening another
+ *   - data-close-on-second-click="True"   clicking an open item closes it
+ *   - data-open-on-hover="False"          open on mouseenter as well as click
+ *   - data-open-by-default="<n>"          open the n-th item (1-indexed) on init
+ *
+ * On boot the list is normalized so animations measure real children:
+ *   - `.u-display-contents` wrappers are unwrapped in place
+ *   - A `.w-dyn-list` is collapsed to its non-`.w-condition-invisible` children
+ *
+ * Webflow markup (style with whatever classes you want):
+ *   <div data-accordion-element="list"
+ *        data-close-previous="True"
+ *        data-close-on-second-click="True"
+ *        data-open-on-hover="False"
+ *        data-open-by-default="1">
+ *     <div data-accordion-element="item">
+ *       <button data-accordion-element="toggle">…</button>
+ *       <div data-accordion-element="content">…</div>
+ *     </div>
+ *   </div>
+ *
+ * Nested accordions work — each item is scoped to its own list.
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Init ─────────────────────────────────────────────────────
+/** Initialize all accordion lists. Safe to call multiple times. */ parcelHelpers.export(exports, "initAccordion", ()=>initAccordion);
+var _utilsJs = require("./utils.js");
+const A = {
+    list: '[data-accordion-element="list"]',
+    item: '[data-accordion-element="item"]',
+    toggle: '[data-accordion-element="toggle"]',
+    content: '[data-accordion-element="content"]'
+};
+const DURATION_MS = 300;
+const EASING = "ease-in-out";
+function initAccordion() {
+    document.querySelectorAll(A.list).forEach((listEl, listIndex)=>{
+        const list = /** @type {HTMLElement} */ listEl;
+        if (list.dataset.scriptInitialized) return;
+        const closePrevious = (0, _utilsJs.attrBool)(list, "data-close-previous", true);
+        const closeOnSecondClick = (0, _utilsJs.attrBool)(list, "data-close-on-second-click", true);
+        const openOnHover = (0, _utilsJs.attrBool)(list, "data-open-on-hover");
+        const openByDefault = (0, _utilsJs.attrNum)(list, "data-open-by-default", 0);
+        let previousIndex = null;
+        /** @type {Array<() => void>} */ const closeFunctions = [];
+        (0, _utilsJs.flattenDisplayContents)(list);
+        (0, _utilsJs.removeCMSList)(list);
+        // Scope to items that belong to THIS list — skip items inside any nested list.
+        const items = [
+            ...list.querySelectorAll(A.item)
+        ].filter((el)=>el.closest(A.list) === list);
+        // Don't mark the list initialized if it has no items yet. An `fs-list-nest`
+        // target is in the DOM at DOMContentLoaded but empty until Finsweet
+        // hydrates it — marking it now would make the re-init hook below skip the
+        // list once items finally arrive, leaving nested accordions unwired.
+        if (items.length === 0) return;
+        list.dataset.scriptInitialized = "true";
+        items.forEach((item, itemIndex)=>{
+            // Same scope discipline for toggle/content so a nested list's elements
+            // don't get wired to this item.
+            const button = [
+                ...item.querySelectorAll(A.toggle)
+            ].find((el)=>el.closest(A.item) === item);
+            const content = [
+                ...item.querySelectorAll(A.content)
+            ].find((el)=>el.closest(A.item) === item);
+            if (!button || !content) {
+                console.warn("Missing elements:", item);
+                return;
+            }
+            button.setAttribute("aria-expanded", "false");
+            button.setAttribute("id", `accordion_button_${listIndex}_${itemIndex}`);
+            content.setAttribute("id", `accordion_content_${listIndex}_${itemIndex}`);
+            button.setAttribute("aria-controls", content.id);
+            content.setAttribute("aria-labelledby", button.id);
+            const contentEl = /** @type {HTMLElement} */ content;
+            contentEl.style.display = "none";
+            contentEl.style.overflow = "hidden";
+            /** @type {Animation | null} */ let currentAnimation = null;
+            // Commit the in-flight animation's current value to inline style, then
+            // cancel it — lets the next animation resume from where this one was
+            // visually, rather than snapping back to the underlying inline value.
+            const stopCurrent = ()=>{
+                if (!currentAnimation) return 0;
+                try {
+                    currentAnimation.commitStyles();
+                } catch (_) {
+                /* commitStyles fails if the element is detached — ignore */ }
+                currentAnimation.cancel();
+                currentAnimation = null;
+                return parseFloat(contentEl.style.height) || 0;
+            };
+            const animateTo = (fromPx, toPx, onDone)=>{
+                contentEl.style.height = `${fromPx}px`;
+                const anim = contentEl.animate([
+                    {
+                        height: `${fromPx}px`
+                    },
+                    {
+                        height: `${toPx}px`
+                    }
+                ], {
+                    duration: DURATION_MS,
+                    easing: EASING,
+                    fill: "forwards"
+                });
+                currentAnimation = anim;
+                anim.onfinish = ()=>{
+                    if (currentAnimation !== anim) return;
+                    currentAnimation = null;
+                    // fill:forwards keeps the final keyframe applied at the animation
+                    // layer after finish, which overrides inline style. That freezes the
+                    // element at a fixed px height — invisible for leaf items but it
+                    // blocks a parent from growing when a nested accordion opens inside
+                    // it. Commit the final value to inline, then drop the animation
+                    // effect, so onDone's `style.height = ""` actually reaches `auto`.
+                    try {
+                        anim.commitStyles();
+                    } catch (_) {
+                    /* commitStyles fails on detached elements — ignore */ }
+                    anim.cancel();
+                    onDone();
+                };
+            };
+            const closeAccordion = ()=>{
+                if (!item.classList.contains("is-active")) return;
+                item.classList.remove("is-active");
+                button.setAttribute("aria-expanded", "false");
+                const from = currentAnimation ? stopCurrent() : contentEl.getBoundingClientRect().height;
+                animateTo(from, 0, ()=>{
+                    contentEl.style.height = "";
+                    contentEl.style.display = "none";
+                });
+            };
+            closeFunctions[itemIndex] = closeAccordion;
+            const openAccordion = (instant = false)=>{
+                if (closePrevious && previousIndex !== null && previousIndex !== itemIndex) closeFunctions[previousIndex]?.();
+                previousIndex = itemIndex;
+                button.setAttribute("aria-expanded", "true");
+                item.classList.add("is-active");
+                const from = stopCurrent();
+                contentEl.style.display = "block";
+                if (instant) {
+                    contentEl.style.height = "";
+                    return;
+                }
+                // Measure the natural target height, then restore the starting height
+                // before the animation begins so there's no visible flash.
+                contentEl.style.height = "auto";
+                const to = contentEl.scrollHeight;
+                animateTo(from, to, ()=>{
+                    contentEl.style.height = "";
+                });
+            };
+            if (openByDefault === itemIndex + 1) openAccordion(true);
+            button.addEventListener("click", ()=>{
+                if (item.classList.contains("is-active") && closeOnSecondClick) {
+                    closeAccordion();
+                    previousIndex = null;
+                } else openAccordion();
+            });
+            if (openOnHover) button.addEventListener("mouseenter", ()=>openAccordion());
+        });
+    });
+}
+// ── Finsweet integration ─────────────────────────────────────
+// Re-init accordions once Finsweet has populated CMS lists. Without this,
+// nested accordions hydrated via fs-list-nest never get wired — the outer
+// list is in the DOM at DOMContentLoaded, the inner ones aren't.
+/** @type {any} */ window.FinsweetAttributes ||= [];
+/** @type {any} */ window.FinsweetAttributes.push([
+    "list",
+    /** @param {Array<{loadingPromise?: Promise<unknown>}>} lists */ (lists)=>{
+        Promise.all(lists.map((l)=>l.loadingPromise || Promise.resolve())).then(initAccordion);
+    }
+]);
+// ── MutationObserver: catch dynamic content from other sources ───
+// Handles cases where accordion lists appear via non-Finsweet means
+// (manual JS, Webflow CMS pagination, modal mounts, etc.). Debounced via
+// rAF to coalesce bulk DOM inserts. The init's `data-script-initialized`
+// guard already skips lists that are already wired.
+let mutationRafId = 0;
+let pendingMutations = false;
+const processMutations = ()=>{
+    mutationRafId = 0;
+    if (!pendingMutations) return;
+    pendingMutations = false;
+    initAccordion();
+};
+const scheduleMutationProcess = ()=>{
+    pendingMutations = true;
+    if (mutationRafId) return;
+    mutationRafId = requestAnimationFrame(processMutations);
+};
+const TRIGGER_SELECTOR = `${A.list}, ${A.item}`;
+const mutationObserver = new MutationObserver((mutations)=>{
+    for (const m of mutations)for (const node of m.addedNodes){
+        if (node.nodeType !== 1) continue;
+        const el = /** @type {Element} */ node;
+        // Match items OR lists, on self OR descendants. Finsweet's `fs-list-nest`
+        // injects ITEMS into an already-existing list, so listening for new
+        // lists alone misses that case — and a `closest()` check would
+        // short-circuit on the outer already-initialized list.
+        const trigger = el.matches?.(TRIGGER_SELECTOR) || el.querySelector?.(TRIGGER_SELECTOR);
+        if (trigger) {
+            scheduleMutationProcess();
+            return;
+        }
+    }
+});
+mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initAccordion, {
+    once: true
+});
+else initAccordion();
+
+},{"./utils.js":"en4he","@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"fkbji":[function(require,module,exports,__globalThis) {
+/**
+ * Collapsible Component
+ *
+ * Independent expand/collapse region. Each `.collapsible_wrap` owns a single
+ * `.collapsible_trigger` and a single `.collapsible_content`. Clicking the
+ * trigger toggles the content with a Web Animations API height tween.
+ *
+ * For grouped expand/collapse with "close previous" behavior, use
+ * `accordion.js` instead — this module intentionally has no group logic.
+ *
+ * Per-wrap data attributes (all optional, all on `.collapsible_wrap`):
+ *   - data-open-by-default="True"   start in the open state (no animation)
+ *   - data-open-on-hover="True"     mouseenter on trigger also opens
+ *                                    (close still requires a click)
+ *   - data-duration="<seconds>"     override animation duration (default 0.3)
+ *   - data-collapsible-id="<key>"   broadcast the `is-active` class onto every
+ *                                    `[data-component="collapsible"]
+ *                                     [data-collapsible-id="<key>"]` element
+ *                                    on the page (one-way mirror, for styling)
+ *
+ * Nesting: a `.collapsible_wrap` inside another wrap's `.collapsible_content`
+ * works — each wrap resolves only its own direct trigger and content, so
+ * nested triggers don't toggle the outer wrap.
+ *
+ * Webflow markup:
+ *   <div class="collapsible_wrap"
+ *        data-open-by-default="True"
+ *        data-open-on-hover="True"
+ *        data-duration="0.4"
+ *        data-collapsible-id="faq-1">
+ *     <button class="collapsible_trigger">…</button>
+ *     <div class="collapsible_content">…</div>
+ *   </div>
+ *
+ *   <!-- anywhere else on the page -->
+ *   <div data-component="collapsible" data-collapsible-id="faq-1">…</div>
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Init ─────────────────────────────────────────────────────
+/** Initialize all `.collapsible_wrap` elements. Safe to call multiple times. */ parcelHelpers.export(exports, "initCollapsible", ()=>initCollapsible);
+var _utilsJs = require("./utils.js");
+// ── Module-level constants ───────────────────────────────────
+const DEFAULT_DURATION_S = 0.3;
+const EASING = "ease-in-out";
+function initCollapsible() {
+    document.querySelectorAll(".collapsible_wrap").forEach((wrapEl, wrapIndex)=>{
+        const wrap = /** @type {HTMLElement} */ wrapEl;
+        if (wrap.dataset.scriptInitialized) return;
+        wrap.dataset.scriptInitialized = "true";
+        // Resolve the trigger/content that belong to THIS wrap — skip any
+        // descendants that live inside a nested .collapsible_wrap.
+        const own = (selector)=>[
+                ...wrap.querySelectorAll(selector)
+            ].find((el)=>el.closest(".collapsible_wrap") === wrap);
+        const trigger = /** @type {HTMLElement | undefined} */ own(".collapsible_trigger");
+        const content = /** @type {HTMLElement | undefined} */ own(".collapsible_content");
+        if (!trigger || !content) {
+            console.warn("Missing elements:", wrap);
+            return;
+        }
+        const openByDefault = (0, _utilsJs.attrBool)(wrap, "data-open-by-default");
+        const openOnHover = (0, _utilsJs.attrBool)(wrap, "data-open-on-hover");
+        const rawDuration = (0, _utilsJs.attrNum)(wrap, "data-duration", DEFAULT_DURATION_S);
+        const durationMs = (rawDuration > 0 ? rawDuration : DEFAULT_DURATION_S) * 1000;
+        trigger.id = `collapsible_trigger_${wrapIndex}`;
+        content.id = `collapsible_content_${wrapIndex}`;
+        trigger.setAttribute("aria-controls", content.id);
+        content.setAttribute("aria-labelledby", trigger.id);
+        trigger.setAttribute("aria-expanded", "false");
+        content.style.display = "none";
+        content.style.overflow = "hidden";
+        // Re-query on each transition so mirrors injected later (CMS, modals,
+        // etc.) still pick up state changes. Selector is built once at init.
+        const mirrorId = wrap.getAttribute("data-collapsible-id");
+        const mirrorSelector = mirrorId ? `[data-component="collapsible"][data-collapsible-id="${CSS.escape(mirrorId)}"]` : null;
+        const getMirrors = ()=>mirrorSelector ? document.querySelectorAll(mirrorSelector) : [];
+        /** @type {Animation | null} */ let currentAnimation = null;
+        // Commit the in-flight animation's current value to inline style, then
+        // cancel it — lets the next animation resume from where this one was
+        // visually, rather than snapping back to the underlying inline value.
+        const stopCurrent = ()=>{
+            if (!currentAnimation) return 0;
+            try {
+                currentAnimation.commitStyles();
+            } catch (_) {
+            /* commitStyles fails if the element is detached — ignore */ }
+            currentAnimation.cancel();
+            currentAnimation = null;
+            return parseFloat(content.style.height) || 0;
+        };
+        const animateTo = (fromPx, toPx, onDone)=>{
+            content.style.height = `${fromPx}px`;
+            const anim = content.animate([
+                {
+                    height: `${fromPx}px`
+                },
+                {
+                    height: `${toPx}px`
+                }
+            ], {
+                duration: durationMs,
+                easing: EASING,
+                fill: "forwards"
+            });
+            currentAnimation = anim;
+            anim.onfinish = ()=>{
+                if (currentAnimation !== anim) return;
+                currentAnimation = null;
+                onDone();
+            };
+        };
+        const open = (instant = false)=>{
+            wrap.classList.add("is-active");
+            trigger.setAttribute("aria-expanded", "true");
+            getMirrors().forEach((m)=>m.classList.add("is-active"));
+            const from = stopCurrent();
+            content.style.display = "block";
+            if (instant) {
+                content.style.height = "";
+                return;
+            }
+            content.style.height = "auto";
+            const to = content.scrollHeight;
+            animateTo(from, to, ()=>{
+                content.style.height = "";
+            });
+        };
+        const close = ()=>{
+            if (!wrap.classList.contains("is-active")) return;
+            wrap.classList.remove("is-active");
+            trigger.setAttribute("aria-expanded", "false");
+            getMirrors().forEach((m)=>m.classList.remove("is-active"));
+            const from = currentAnimation ? stopCurrent() : content.getBoundingClientRect().height;
+            animateTo(from, 0, ()=>{
+                content.style.height = "";
+                content.style.display = "none";
+            });
+        };
+        const toggle = ()=>{
+            if (wrap.classList.contains("is-active")) close();
+            else open();
+        };
+        if (openByDefault) open(true);
+        trigger.addEventListener("click", toggle);
+        if (openOnHover) trigger.addEventListener("mouseenter", ()=>open());
+    });
+}
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initCollapsible, {
+    once: true
+});
+else initCollapsible();
+
+},{"./utils.js":"en4he","@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"6GCUi":[function(require,module,exports,__globalThis) {
+/**
+ * Dropdown Component
+ *
+ * Single togglable dropdown region with an animated open/close, click-outside
+ * dismissal, Escape key support, and ArrowUp/ArrowDown navigation through
+ * focusable items inside the content panel.
+ *
+ * Per-wrap data attributes (all optional, all on the wrap):
+ *   - data-open-on-hover-in="True"     mouseenter on the wrap opens it
+ *   - data-close-on-hover-out="True"   mouseleave on the wrap closes it
+ *
+ * Webflow markup (style with whatever classes you want):
+ *   <div data-dropdown-element="wrap"
+ *        data-open-on-hover-in="True"
+ *        data-close-on-hover-out="True">
+ *     <button data-dropdown-element="toggle">…</button>
+ *     <div data-dropdown-element="content">
+ *       <a href="…">Item 1</a>
+ *       <a href="…">Item 2</a>
+ *     </div>
+ *   </div>
+ *
+ * Nested dropdowns work — each wrap resolves only its own direct toggle and
+ * content, so nested toggles don't toggle the outer wrap.
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Init ─────────────────────────────────────────────────────
+/** Initialize all dropdown wraps. Safe to call multiple times. */ parcelHelpers.export(exports, "initDropdown", ()=>initDropdown);
+var _utilsJs = require("./utils.js");
+const A = {
+    wrap: '[data-dropdown-element="wrap"]',
+    toggle: '[data-dropdown-element="toggle"]',
+    content: '[data-dropdown-element="content"]'
+};
+const DURATION_MS = 200;
+const EASING = "ease-out";
+const FOCUSABLE_ITEM_SELECTOR = "a, button";
+// Visual entry state — alongside the height tween, content fades in, slides
+// up from `TRANSLATE_CLOSED` below its resting position, and scales from
+// `SCALE_CLOSED`. transform-origin is set to "top" at init so the scale
+// anchors under the toggle rather than at the box's center.
+const SCALE_CLOSED = 0.97;
+const TRANSLATE_CLOSED_PX = 8;
+const CLOSED_OPACITY = "0";
+const CLOSED_TRANSFORM = `translateY(${TRANSLATE_CLOSED_PX}px) scale(${SCALE_CLOSED})`;
+const OPEN_OPACITY = "1";
+const OPEN_TRANSFORM = "translateY(0px) scale(1)";
+// Dynamic stacking — each open bumps the wrap above any already-animating
+// peers so the newly-opening dropdown always sits on top of the one still
+// closing underneath it. Counter resets to 0 when every dropdown is closed.
+const Z_BASE = 1000;
+let zCounter = 0;
+/**
+ * @typedef {{ wrap: HTMLElement, toggle: HTMLElement, close: () => void, focusableItems: HTMLElement[] }} ActiveDropdown
+ */ // Only one dropdown can be open at a time, so a single reference is enough —
+// no need to scan a registry on every page click and keystroke.
+/** @type {ActiveDropdown | null} */ let activeDropdown = null;
+// ── Shared document listeners (attached once) ────────────────
+let documentListenersAttached = false;
+function attachDocumentListeners() {
+    if (documentListenersAttached) return;
+    documentListenersAttached = true;
+    document.addEventListener("click", (e)=>{
+        if (!activeDropdown) return;
+        const target = /** @type {Element | null} */ e.target;
+        if (target && !activeDropdown.wrap.contains(target)) activeDropdown.close();
+    });
+    document.addEventListener("keydown", (e)=>{
+        if (!activeDropdown) return;
+        if (e.key === "Escape") {
+            const { toggle, close } = activeDropdown;
+            close();
+            toggle.focus();
+            return;
+        }
+        if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+        const focused = /** @type {Element | null} */ document.activeElement;
+        if (!focused || !activeDropdown.wrap.contains(focused)) return;
+        const items = activeDropdown.focusableItems;
+        if (!items.length) return;
+        e.preventDefault();
+        const step = e.key === "ArrowDown" ? 1 : -1;
+        const currentIndex = items.indexOf(/** @type {HTMLElement} */ focused);
+        const nextIndex = currentIndex === -1 ? step === 1 ? 0 : items.length - 1 : (currentIndex + step + items.length) % items.length;
+        items[nextIndex].focus();
+    });
+}
+const allClosed = ()=>activeDropdown === null;
+function initDropdown() {
+    attachDocumentListeners();
+    document.querySelectorAll(A.wrap).forEach((wrapEl, wrapIndex)=>{
+        const wrap = /** @type {HTMLElement} */ wrapEl;
+        if (wrap.dataset.scriptInitialized) return;
+        wrap.dataset.scriptInitialized = "true";
+        // Resolve the toggle/content that belong to THIS wrap — skip any
+        // descendants that live inside a nested wrap.
+        const own = (selector)=>[
+                ...wrap.querySelectorAll(selector)
+            ].find((el)=>el.closest(A.wrap) === wrap);
+        const toggle = /** @type {HTMLElement | undefined} */ own(A.toggle);
+        const content = /** @type {HTMLElement | undefined} */ own(A.content);
+        if (!toggle || !content) {
+            console.warn("Missing elements:", wrap);
+            return;
+        }
+        const openOnHoverIn = (0, _utilsJs.attrBool)(wrap, "data-open-on-hover-in");
+        const closeOnHoverOut = (0, _utilsJs.attrBool)(wrap, "data-close-on-hover-out");
+        toggle.id = `dropdown_toggle_${wrapIndex}`;
+        content.id = `dropdown_content_${wrapIndex}`;
+        toggle.setAttribute("aria-controls", content.id);
+        toggle.setAttribute("aria-expanded", "false");
+        content.setAttribute("aria-labelledby", toggle.id);
+        content.style.display = "none";
+        content.style.transformOrigin = "top";
+        /** @type {Animation | null} */ let currentAnimation = null;
+        // Snapshot whatever the in-flight animation is currently rendering, commit
+        // those values to inline style, then cancel — lets the next animation
+        // resume from the visible state instead of snapping to a default.
+        const snapshotAndStop = ()=>{
+            if (!currentAnimation) return null;
+            try {
+                currentAnimation.commitStyles();
+            } catch (_) {
+            /* commitStyles fails if the element is detached — ignore */ }
+            currentAnimation.cancel();
+            currentAnimation = null;
+            return {
+                height: parseFloat(content.style.height) || 0,
+                opacity: content.style.opacity || OPEN_OPACITY,
+                transform: content.style.transform || OPEN_TRANSFORM
+            };
+        };
+        const animateTo = (from, to, onDone)=>{
+            // Clip during the animation only — children that should overflow
+            // (submenus, focus rings) need to escape once the dropdown is open.
+            content.style.overflow = "hidden";
+            // Inline-style the from state so a mid-flight cancel reverts cleanly.
+            content.style.height = `${from.height}px`;
+            content.style.opacity = from.opacity;
+            content.style.transform = from.transform;
+            const anim = content.animate([
+                {
+                    height: `${from.height}px`,
+                    opacity: from.opacity,
+                    transform: from.transform
+                },
+                {
+                    height: `${to.height}px`,
+                    opacity: to.opacity,
+                    transform: to.transform
+                }
+            ], {
+                duration: DURATION_MS,
+                easing: EASING,
+                fill: "forwards"
+            });
+            currentAnimation = anim;
+            anim.onfinish = ()=>{
+                if (currentAnimation !== anim) return;
+                currentAnimation = null;
+                onDone();
+                // Release the forwards fill so the element renders from inline+cascade
+                // again — otherwise height stays locked to the value measured at
+                // animation start, clipping any content that grew afterward.
+                anim.cancel();
+            };
+        };
+        const clearInlineState = ()=>{
+            content.style.height = "";
+            content.style.opacity = "";
+            content.style.transform = "";
+        };
+        const isOpen = ()=>toggle.getAttribute("aria-expanded") === "true";
+        const open = ()=>{
+            if (isOpen()) return;
+            // Only one dropdown open at a time — sidesteps z-index conflicts when
+            // two open menus would otherwise stack by document order.
+            if (activeDropdown && activeDropdown.wrap !== wrap) activeDropdown.close();
+            // Lift above any peer that's still animating closed so it can't
+            // overlap visually during the parallel close/open.
+            zCounter += 1;
+            wrap.style.zIndex = String(Z_BASE + zCounter);
+            wrap.classList.add("is-active");
+            toggle.setAttribute("aria-expanded", "true");
+            const from = snapshotAndStop() || {
+                height: 0,
+                opacity: CLOSED_OPACITY,
+                transform: CLOSED_TRANSFORM
+            };
+            content.style.display = "block";
+            content.style.height = "auto";
+            const toHeight = content.scrollHeight;
+            activeDropdown = {
+                wrap,
+                toggle,
+                close,
+                focusableItems: /** @type {HTMLElement[]} */ [
+                    ...content.querySelectorAll(FOCUSABLE_ITEM_SELECTOR)
+                ]
+            };
+            animateTo(from, {
+                height: toHeight,
+                opacity: OPEN_OPACITY,
+                transform: OPEN_TRANSFORM
+            }, ()=>{
+                clearInlineState();
+                // Let descendants overflow once the dropdown is settled open.
+                content.style.overflow = "";
+            });
+        };
+        const close = ()=>{
+            if (!isOpen()) return;
+            wrap.classList.remove("is-active");
+            toggle.setAttribute("aria-expanded", "false");
+            if (activeDropdown && activeDropdown.wrap === wrap) activeDropdown = null;
+            const from = snapshotAndStop() || {
+                height: content.getBoundingClientRect().height,
+                opacity: OPEN_OPACITY,
+                transform: OPEN_TRANSFORM
+            };
+            animateTo(from, {
+                height: 0,
+                opacity: CLOSED_OPACITY,
+                transform: CLOSED_TRANSFORM
+            }, ()=>{
+                clearInlineState();
+                content.style.display = "none";
+                wrap.style.zIndex = "";
+                if (allClosed()) zCounter = 0;
+            });
+        };
+        toggle.addEventListener("click", ()=>{
+            isOpen() ? close() : open();
+        });
+        if (openOnHoverIn) wrap.addEventListener("mouseenter", open);
+        if (closeOnHoverOut) wrap.addEventListener("mouseleave", close);
+    });
+}
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initDropdown, {
+    once: true
+});
+else initDropdown();
+
+},{"./utils.js":"en4he","@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"1KIEs":[function(require,module,exports,__globalThis) {
+/**
+ * Variables (Placeholder Replacement)
+ *
+ * Replaces {{key}} placeholders in text and common attributes across the page.
+ * Supports scoped (per-ancestor) and global variables.
+ *
+ * Two namespaces:
+ *   • `$`-prefixed keys (built-in dynamics like {{$year}}) resolve only
+ *     against the module-level globals map — never the ancestor chain.
+ *   • Everything else: nearest ancestor `data-var-{key}` wins, falling
+ *     back to a `[data-variable-key]` element anywhere on the page.
+ *
+ * Unknown keys are left as-is so typos are visible in the published site.
+ *
+ * Usage in Webflow:
+ *
+ *   Global values (place anywhere — typically inside a hidden CMS collection):
+ *     <div data-variable-key="company-name" data-variable-value="Bruce Studios"></div>
+ *     <div data-variable-key="phone" data-variable-value="+46 31 ..."></div>
+ *
+ *   Scoped values — must use the data-var-* prefix so generic Webflow data
+ *   attributes (data-loop, data-src, ...) can't collide with placeholders:
+ *     <div data-var-author-name="Johan Andersson">
+ *       <p>{{author-name}}</p>  →  Johan Andersson
+ *     </div>
+ *
+ *   Built-in dynamics — reserved `$` prefix isolates them from user keys:
+ *     <p>© {{$year}}</p>
+ *
+ *   Anywhere in text content:
+ *     <p>Welcome to {{company-name}}. © {{$year}}</p>
+ *
+ *   In attributes (href, src, alt, title, aria-label, placeholder, value):
+ *     <a href="mailto:{{email}}">Contact</a>
+ *
+ * Handles late-arriving content (Finsweet List Nest, async injection) via a
+ * debounced re-scan + delayed safety passes.
+ *
+ * Loaded globally — no external dependencies.
+ */ // ── Module-level constants ───────────────────────────────────
+// Keys allow `$` so built-in dynamics like {{$year}} live in a reserved
+// namespace that can't be shadowed by CMS-defined variables.
+// PATTERN is `/g` (used by String.replace); HAS_PATTERN is the same expression
+// without `/g` for stateless `.test()` checks — calling `.test()` on a `/g`
+// regex advances lastIndex and can return inconsistent results across calls.
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Public API ───────────────────────────────────────────────
+/**
+ * Initialize variable replacement: load globals + run an initial pass.
+ * Safe to call multiple times.
+ */ parcelHelpers.export(exports, "initVariables", ()=>initVariables);
+/**
+ * Manually trigger a re-scan (e.g. after injecting custom dynamic content).
+ */ parcelHelpers.export(exports, "refreshVariables", ()=>refreshVariables);
+/**
+ * Programmatically set a global variable. Useful for runtime values
+ * (user state, A/B test variant, geo) that can't live in CMS. Triggers
+ * a full-document re-scan, so batch calls when possible.
+ *
+ * @param {string} key
+ * @param {string} value
+ */ parcelHelpers.export(exports, "setGlobal", ()=>setGlobal);
+const PATTERN = /\{\{\s*([\$\w-]+)\s*\}\}/g;
+const HAS_PATTERN = /\{\{\s*[\$\w-]+\s*\}\}/;
+const BUILTIN_PREFIX = "$";
+const ATTRS = [
+    "href",
+    "src",
+    "alt",
+    "title",
+    "aria-label",
+    "placeholder",
+    "value"
+];
+const ATTR_SELECTOR = ATTRS.map((a)=>`[${a}*="{{"]`).join(",");
+const SAFETY_PASS_DELAYS = [
+    500,
+    1500,
+    3500
+]; // ms
+// Globals are seeded with `$`-prefixed built-ins so user-defined CMS keys
+// can never shadow them. Populated further from [data-variable-key] on each
+// pass to catch late-loaded items.
+/** @type {Record<string, string>} */ const globals = {
+    $year: String(new Date().getFullYear())
+};
+// Originals of text nodes and attributes that ever contained {{...}}. process()
+// always substitutes from the stored template, never from the current value —
+// so calling setGlobal() after the first pass actually re-renders. Without
+// this, the first pass would overwrite the placeholders and any subsequent
+// re-scan would find nothing to replace.
+/** @type {WeakMap<Text, string>} */ const textTemplates = new WeakMap();
+/** @type {Map<Element, Record<string, string>>} */ const attrTemplates = new Map();
+/**
+ * Load global key/value pairs from any [data-variable-key] element on
+ * the page. Idempotent — re-runs on each pass to catch late-loaded items.
+ */ function loadGlobals() {
+    document.querySelectorAll("[data-variable-key]").forEach((el)=>{
+        const key = el.getAttribute("data-variable-key");
+        const value = el.getAttribute("data-variable-value");
+        // First definition wins. Built-ins ($-prefixed) are seeded first so they
+        // can't be silently replaced by a CMS item with the same key.
+        if (key && !(key in globals)) globals[key] = value ?? "";
+    });
+}
+/**
+ * Resolve a {{key}} reference against scoped + global sources.
+ *
+ * Reserved-prefix keys (starting with `$`) are built-ins and bypass the
+ * ancestor walk — they only resolve against the globals map.
+ *
+ * @param {string} key
+ * @param {Node} node
+ * @returns {string | null} The replacement value, or null if unresolved.
+ */ function resolve(key, node) {
+    if (key.startsWith(BUILTIN_PREFIX)) return key in globals ? globals[key] : null;
+    const scopedAttr = `data-var-${key}`;
+    /** @type {Element | null} */ let el = node.nodeType === 1 ? /** @type {Element} */ node : node.parentElement;
+    while(el){
+        if (el.hasAttribute(scopedAttr)) return el.getAttribute(scopedAttr) ?? "";
+        el = el.parentElement;
+    }
+    return key in globals ? globals[key] : null;
+}
+/**
+ * Build a replacer function bound to a specific node for scope resolution.
+ *
+ * @param {Node} node
+ * @returns {(match: string, key: string) => string}
+ */ function replacer(node) {
+    return (match, key)=>{
+        const value = resolve(key, node);
+        return value !== null ? value : match; // leave unresolved keys visible
+    };
+}
+// ── Core processing ──────────────────────────────────────────
+/**
+ * Scan the entire document body and replace any {{key}} placeholders found.
+ * Idempotent: nothing without {{...}} is touched, so multiple passes are safe.
+ *
+ * Always scans from document.body rather than from MutationObserver-supplied
+ * subtrees — Finsweet often inserts a parent container, then populates its
+ * children in subsequent mutations. A full-body scan sidesteps that race.
+ */ function process() {
+    // Accept a text node if it currently contains {{...}} (first-pass discovery)
+    // OR if it's already tracked (so we revisit it on every re-scan to honour
+    // updated globals — without this, a re-scan after substitution would skip
+    // the node and setGlobal() couldn't reactively update the page).
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, {
+        acceptNode: (n)=>{
+            const tn = /** @type {Text} */ n;
+            return HAS_PATTERN.test(n.nodeValue || "") || textTemplates.has(tn) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT;
+        }
+    });
+    /** @type {Text[]} */ const textNodes = [];
+    let n;
+    while(n = walker.nextNode())textNodes.push(/** @type {Text} */ n);
+    for (const tn of textNodes){
+        let tmpl = textTemplates.get(tn);
+        if (tmpl === undefined) {
+            tmpl = tn.nodeValue || "";
+            textTemplates.set(tn, tmpl);
+        }
+        const next = tmpl.replace(PATTERN, replacer(tn));
+        if (next !== tn.nodeValue) tn.nodeValue = next;
+    }
+    // Attribute scan: union of elements that currently contain `{{` (first-pass
+    // discovery) with elements we've previously tracked (so re-scans pick them
+    // up after their attribute has been substituted and no longer matches the
+    // `[attr*="{{"]` selector).
+    /** @type {Set<Element>} */ const elementsToProcess = new Set(document.querySelectorAll(ATTR_SELECTOR));
+    for (const el of attrTemplates.keys())elementsToProcess.add(el);
+    for (const el of elementsToProcess){
+        let originals = attrTemplates.get(el);
+        for (const attr of ATTRS){
+            const cur = el.getAttribute(attr);
+            if (cur === null) continue;
+            if (!originals || !(attr in originals)) {
+                if (!cur.includes("{{")) continue;
+                if (!originals) {
+                    originals = {};
+                    attrTemplates.set(el, originals);
+                }
+                originals[attr] = cur;
+            }
+            const next = originals[attr].replace(PATTERN, replacer(el));
+            if (next !== cur) el.setAttribute(attr, next);
+        }
+    }
+}
+// ── Debounced re-process ─────────────────────────────────────
+// Any relevant DOM change schedules a single rAF-deferred re-scan, so a
+// burst of Finsweet mutations triggers one pass instead of N. `dirty` lets
+// the safety-pass timers skip their work on pages that have settled.
+let pendingRafId = 0;
+let dirty = false;
+const runProcess = ()=>{
+    loadGlobals(); // in case the globals list itself was Finsweet-managed
+    process();
+    dirty = false;
+};
+const scheduleProcess = ()=>{
+    dirty = true;
+    if (pendingRafId) return;
+    pendingRafId = requestAnimationFrame(()=>{
+        pendingRafId = 0;
+        runProcess();
+    });
+};
+/**
+ * Cheap pre-filter for the MutationObserver: only re-process if the added
+ * subtree could plausibly affect placeholder resolution. Skips the constant
+ * DOM churn from sliders, tabs, video players, etc.
+ *
+ * @param {Node} node
+ */ function subtreeIsRelevant(node) {
+    if (node.nodeType === 3) return (node.nodeValue || "").includes("{{");
+    if (node.nodeType !== 1) return false;
+    const el = /** @type {Element} */ node;
+    // Text-content placeholders are the common case.
+    if ((el.textContent || "").includes("{{")) return true;
+    // Attribute placeholders + new [data-variable-key] definitions are rarer
+    // but possible — one CSS engine call each.
+    if (el.matches(ATTR_SELECTOR) || el.querySelector(ATTR_SELECTOR)) return true;
+    if (el.matches("[data-variable-key]") || el.querySelector("[data-variable-key]")) return true;
+    return false;
+}
+function initVariables() {
+    runProcess();
+}
+function refreshVariables() {
+    scheduleProcess();
+}
+function setGlobal(key, value) {
+    globals[key] = value;
+    scheduleProcess();
+}
+// ── MutationObserver: catch late-arriving content ────────────
+const mutationObserver = new MutationObserver((mutations)=>{
+    for (const m of mutations){
+        for (const node of m.addedNodes)if (subtreeIsRelevant(node)) {
+            scheduleProcess();
+            return;
+        }
+    }
+});
+// ── Auto-boot ────────────────────────────────────────────────
+const boot = ()=>{
+    initVariables();
+    mutationObserver.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    SAFETY_PASS_DELAYS.forEach((ms)=>setTimeout(()=>{
+            if (dirty) runProcess();
+        }, ms));
+};
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, {
+    once: true
+});
+else boot();
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"alcnd":[function(require,module,exports,__globalThis) {
+/**
+ * City Context
+ *
+ * Tracks the current city (persisted in localStorage). The list of cities and
+ * every per-city value is read from a hidden CMS Collection List in the DOM,
+ * so editors add cities or new per-city fields without touching code.
+ *
+ * ── CMS setup ────────────────────────────────────────────────
+ * One hidden Collection List, typically placed inside a global Symbol so it
+ * ships on every page. Custom attributes are bound directly on the Collection
+ * Item (the `.w-dyn-item` element) — no inner wrapper needed:
+ *
+ *   <div data-city-list style="display:none" aria-hidden="true">
+ *     <!-- Collection List → Collection Item, with custom attributes: -->
+ *     <!--
+ *       data-city-slug="{Slug}"
+ *       data-city-name="{Name}"
+ *       data-city-default="{Is Default}"
+ *       data-city-var-studio-count="{Studio Count}"
+ *       data-city-var-phone="{Phone}"
+ *     -->
+ *   </div>
+ *
+ * Three reserved attributes per item:
+ *   data-city-slug    identifier (required)
+ *   data-city-name    display name (required)
+ *   data-city-default "True"/"true" marks the fallback city
+ *
+ * Any other attribute prefixed `data-city-var-` is treated as a per-city
+ * variable. The substring after the prefix is the placeholder key, so
+ * `data-city-var-studio-count="4"` makes {{studio-count}} render "4"
+ * when that city is active.
+ *
+ * ── Placeholder integration ──────────────────────────────────
+ * On activation, every var attribute is pushed into the variables module via
+ * setGlobal(). That triggers a debounced re-process, so {{key}} placeholders
+ * across the page flip in one rAF. Also seeds two reserved keys:
+ *   {{city}}       current city slug
+ *   {{city-name}}  display name
+ *
+ * ── Switcher UI ──────────────────────────────────────────────
+ * Any element with data-set-city="<slug>" becomes a switcher:
+ *   <button data-set-city="cph">Copenhagen</button>
+ * Delegated handlers cover static + Finsweet-injected switchers. The active
+ * switcher is flagged with data-city-active="true" for styling.
+ *
+ * ── Programmatic API ─────────────────────────────────────────
+ *   window.bruce.city.get()        → "sto"
+ *   window.bruce.city.set("cph")   → switch, persist, re-render
+ *   window.bruce.city.all()        → [{slug, name, isDefault, coords, vars}, ...]
+ *                                    coords is [lng, lat] if data-city-var-lat
+ *                                    and data-city-var-lng are both set, else null.
+ *   window.bruce.city.onChange(fn) → subscribe; returns unsubscribe
+ *
+ * ── Related ──────────────────────────────────────────────────
+ * `data-city-show="<slug-or-name>[,...]"` toggles element visibility
+ * based on the active city — see src/city-visibility.js.
+ */ var _variablesJs = require("./variables.js");
+var _utilsJs = require("./utils.js");
+const STORAGE_KEY = "bruce-city";
+const LIST_SELECTOR = "[data-city-list]";
+const VAR_PREFIX = "data-city-var-";
+const SAFETY_PASS_DELAYS = [
+    500,
+    1500,
+    3500
+];
+/** @type {Set<(slug: string) => void>} */ const listeners = new Set();
+/** @type {Array<{slug: string, name: string, isDefault: boolean, coords: [number, number] | null, vars: Record<string, string>}>} */ let cities = [];
+/** @type {Set<string>} */ let knownVarKeys = new Set();
+/** @type {string | null} */ let current = null;
+const hasCity = (slug)=>cities.some((c)=>c.slug === slug);
+// ── Load city list from CMS ──────────────────────────────────
+function loadCities() {
+    const next = [];
+    const nextVarKeys = new Set();
+    document.querySelectorAll(`${LIST_SELECTOR} [data-city-slug]`).forEach((el)=>{
+        const slug = el.getAttribute("data-city-slug");
+        if (!slug) return;
+        /** @type {Record<string, string>} */ const vars = {};
+        for (const attr of el.attributes){
+            if (!attr.name.startsWith(VAR_PREFIX)) continue;
+            const key = attr.name.slice(VAR_PREFIX.length);
+            vars[key] = attr.value;
+            nextVarKeys.add(key);
+        }
+        // lat/lng come in as `data-city-var-*` strings; parse once here so
+        // consumers get a typed [lng, lat] tuple (Mapbox convention) and a
+        // missing-or-invalid pair surfaces as null.
+        const lat = parseFloat(vars.lat);
+        const lng = parseFloat(vars.lng);
+        const coords = isNaN(lat) || isNaN(lng) ? null : [
+            lng,
+            lat
+        ];
+        next.push({
+            slug,
+            name: el.getAttribute("data-city-name") ?? "",
+            isDefault: (0, _utilsJs.attrBool)(/** @type {HTMLElement} */ el, "data-city-default"),
+            coords,
+            vars
+        });
+    });
+    cities = next;
+    knownVarKeys = nextVarKeys;
+}
+// ── Pick the initial city ────────────────────────────────────
+// Priority: URL param → persisted choice → page-level override → CMS default → first city.
+// URL param wins over the persisted choice so a `?city=<name>` deep link lands
+// the map on that city instead of the visitor's saved city. Transient: not
+// written back to localStorage. Match is permissive: trim + case-insensitive on
+// slug AND name, so editor whitespace in CMS fields and varying URL casing
+// don't break the lookup. Every match is returned so studios.js can fit the
+// camera to all of them.
+//
+// Primary format is the clean param from studios-search-redirect.js — repeated
+// `city=` keys (`?city=Bergen&city=Oslo`).
+function parseFilterValues(raw) {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("[")) try {
+        const arr = JSON.parse(trimmed);
+        if (Array.isArray(arr)) return arr.map(String);
+    } catch  {
+    // Malformed JSON — fall through to comma-split below.
+    }
+    return trimmed.split(",");
+}
+function citiesFromUrl() {
+    const sp = new URLSearchParams(location.search);
+    let raw = sp.getAll("city");
+    const values = raw.map((s)=>s.trim().toLowerCase()).filter(Boolean);
+    if (values.length === 0) return [];
+    const matched = [];
+    const missed = [];
+    for (const value of values){
+        const match = cities.find((c)=>c.slug.trim().toLowerCase() === value || c.name.trim().toLowerCase() === value);
+        if (match) matched.push(match);
+        else missed.push(value);
+    }
+    if (missed.length) console.warn(`[bruce.city] URL city filter \u{2014} these values matched no city:`, missed, "Known cities:", cities.map((c)=>({
+            slug: c.slug,
+            name: c.name
+        })));
+    return matched;
+}
+function cityFromUrl() {
+    return citiesFromUrl()[0]?.slug ?? null;
+}
+function getInitialCity() {
+    const fromUrl = cityFromUrl();
+    if (fromUrl) return fromUrl;
+    let stored = null;
+    try {
+        stored = localStorage.getItem(STORAGE_KEY);
+    } catch  {
+    // localStorage can throw in private mode or with strict cookie policies.
+    }
+    if (stored && hasCity(stored)) return stored;
+    const pageDefault = document.body?.dataset.defaultCity;
+    if (pageDefault && hasCity(pageDefault)) return pageDefault;
+    return cities.find((c)=>c.isDefault)?.slug ?? cities[0]?.slug ?? null;
+}
+// ── Activation ───────────────────────────────────────────────
+// Push the active city's vars into the variables module. Any key declared by
+// some other city but missing on this one is emitted as an empty string, so a
+// switch doesn't leave stale values from the previous city visible.
+function applyCity(slug) {
+    const city = cities.find((c)=>c.slug === slug);
+    if (!city) return;
+    const slugChanged = slug !== current;
+    current = slug;
+    (0, _variablesJs.setGlobal)("city", city.slug);
+    (0, _variablesJs.setGlobal)("city-name", city.name);
+    for (const key of knownVarKeys)(0, _variablesJs.setGlobal)(key, city.vars[key] ?? "");
+    syncActiveSwitchers();
+    // Vars always re-push (Finsweet may reload with fresh CMS data for the same
+    // slug); subscribers only fire on an actual slug change.
+    if (slugChanged) listeners.forEach((fn)=>{
+        try {
+            fn(slug);
+        } catch (err) {
+            console.error("[bruce.city] onChange listener threw", err);
+        }
+    });
+}
+function syncActiveSwitchers() {
+    document.querySelectorAll("[data-set-city]").forEach((el)=>{
+        /** @type {HTMLElement} */ el.dataset.cityActive = el.getAttribute("data-set-city") === current ? "true" : "false";
+    });
+}
+function persist(slug) {
+    try {
+        localStorage.setItem(STORAGE_KEY, slug);
+    } catch  {
+    // Same caveat as the read path — best-effort.
+    }
+}
+// ── Boot / re-boot ───────────────────────────────────────────
+// Idempotent: safe to call on initial load, after Finsweet renders, and from
+// the MutationObserver. Preserves the current slug across re-loads of the
+// list so editor-side CMS updates don't reset the user's choice.
+function refresh() {
+    const previous = current;
+    loadCities();
+    if (cities.length === 0) return;
+    const next = previous && hasCity(previous) ? previous : getInitialCity();
+    if (!next) return;
+    applyCity(next);
+}
+// ── Public API ───────────────────────────────────────────────
+const api = {
+    get () {
+        return current;
+    },
+    /** @param {string} slug */ set (slug) {
+        if (slug === current) return;
+        if (!hasCity(slug)) {
+            console.warn(`[bruce.city] unknown city "${slug}" \u{2014} ignoring`);
+            return;
+        }
+        applyCity(slug);
+        persist(slug);
+    },
+    all () {
+        return cities.map((c)=>({
+                ...c,
+                vars: {
+                    ...c.vars
+                }
+            }));
+    },
+    // Cities matched by the `?city=<a>,<b>` URL param, in URL order.
+    // Empty when the param is absent or matches nothing. studios.js reads this
+    // to fit the map camera to the URL-filtered set instead of overriding it
+    // back to the visitor's saved city.
+    urlSelection () {
+        return citiesFromUrl().map((c)=>({
+                ...c,
+                vars: {
+                    ...c.vars
+                }
+            }));
+    },
+    /** @param {(slug: string) => void} fn */ onChange (fn) {
+        listeners.add(fn);
+        return ()=>listeners.delete(fn);
+    }
+};
+/** @type {any} */ window.bruce ||= {};
+/** @type {any} */ window.bruce.city = api;
+// ── Delegated switcher handlers ──────────────────────────────
+// Single document-level listener covers static buttons, Finsweet-injected
+// switchers, and anything added later. preventDefault on the click guards
+// against anchor switchers navigating to "#".
+/** @param {Event} e */ function handleSwitcher(e) {
+    const trigger = /** @type {Element | null} */ e.target?.closest?.("[data-set-city]");
+    if (!trigger) return;
+    e.preventDefault();
+    api.set(trigger.getAttribute("data-set-city") ?? "");
+}
+document.addEventListener("click", handleSwitcher);
+// Keyboard activation for non-native triggers (divs with role="button").
+// Native <button>/<a> already fire click on Enter/Space, so skip them.
+document.addEventListener("keydown", (e)=>{
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const trigger = /** @type {Element | null} */ e.target?.closest?.("[data-set-city]");
+    if (!trigger || trigger.tagName === "BUTTON" || trigger.tagName === "A") return;
+    handleSwitcher(e);
+});
+// ── Finsweet hook: re-load when CMS lists resolve ────────────
+/** @type {any} */ window.FinsweetAttributes ||= [];
+/** @type {any} */ window.FinsweetAttributes.push([
+    "list",
+    /** @param {Array<{loadingPromise?: Promise<unknown>}>} lists */ (lists)=>{
+        Promise.all(lists.map((l)=>l.loadingPromise || Promise.resolve())).then(refresh);
+    }
+]);
+// ── MutationObserver: catch non-Finsweet late inserts ────────
+// Only schedules a refresh if a relevant subtree was added. Debounced via rAF
+// so a burst of CMS mutations triggers one re-load.
+//
+// Pre-filter is intentionally cheap: `matches` only, no subtree walk. Webflow
+// pages mutate constantly (sliders, tabs, animations); a `querySelector` on
+// every added node would dominate the main thread. Finsweet's own deep inserts
+// are handled by the FinsweetAttributes hook below — this observer only needs
+// to catch direct inserts of the list wrapper or a city item.
+let pendingRafId = 0;
+const scheduleRefresh = ()=>{
+    if (pendingRafId) return;
+    pendingRafId = requestAnimationFrame(()=>{
+        pendingRafId = 0;
+        refresh();
+    });
+};
+const observer = new MutationObserver((mutations)=>{
+    for (const m of mutations)for (const node of m.addedNodes){
+        if (node.nodeType !== 1) continue;
+        const el = /** @type {Element} */ node;
+        if (el.matches?.(LIST_SELECTOR) || el.matches?.("[data-city-slug]")) {
+            scheduleRefresh();
+            return;
+        }
+    }
+});
+// ── Auto-boot ────────────────────────────────────────────────
+const boot = ()=>{
+    refresh();
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    SAFETY_PASS_DELAYS.forEach((ms)=>setTimeout(()=>{
+            if (!current) refresh();
+        }, ms));
+};
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, {
+    once: true
+});
+else boot();
+
+},{"./variables.js":"1KIEs","./utils.js":"en4he"}],"fwmRP":[function(require,module,exports,__globalThis) {
+/**
+ * City Visibility
+ *
+ * Toggles visibility of any element marked `data-city-show="<slug-or-name>[,...]"`
+ * based on the active city resolved by src/city.js.
+ *
+ * ── Required CSS (Webflow site-wide custom code, set up once) ─────
+ *   .is-city-hidden { display: none !important; }
+ *   html:not(.wf-design-mode) body:not(.is-city-ready)
+ *     [data-city-show]:not([data-city-show=""]) {
+ *     display: none;
+ *   }
+ *
+ * The html:not(.wf-design-mode) prefix lets editors preview one city
+ * at a time in the Webflow Designer via the data-preview-city
+ * attribute — see specs/2026-05-27-preview-city-design.md.
+ *
+ * The !important defeats Webflow class-driven display:flex/grid/block
+ * (same external-CSS precedence lesson as the bottom-sheet component).
+ * Pre-hide uses display:none rather than visibility:hidden to avoid
+ * empty slots in flex/grid sections during the boot window.
+ *
+ * ── Attribute semantics ───────────────────────────────────────────
+ *   data-city-show="cph"          visible only when active city is cph
+ *   data-city-show="cph, sto"     visible when active is cph or sto
+ *   data-city-show="Copenhagen"   name match works too, case-insensitive
+ *   data-city-show=""             always visible (empty value is a no-op)
+ *   no attribute                  always visible (normal behavior)
+ *
+ * Matching is case-insensitive against city.slug AND city.name (same
+ * permissive lookup as citiesFromUrl() in src/city.js). Values matching
+ * no city leave the element hidden and warn once per (attr, value) pair.
+ *
+ * ── FOUC ──────────────────────────────────────────────────────────
+ * Pre-hide rule keeps non-empty data-city-show elements display:none
+ * until <body> gains is-city-ready. This module sets that body class
+ * only AFTER its first sweep against a non-null active city, so if
+ * city.js fails to boot the pre-hide stays in place (fail-closed).
+ *
+ * Late inserts (Finsweet, dynamic CMS) are caught by a narrow
+ * MutationObserver and safety-pass timers at [500, 1500, 3500] ms,
+ * matching the convention in src/city.js and src/variables.js.
+ */ var _cityVisibilityDecideJs = require("./city-visibility-decide.js");
+const ATTR = "data-city-show";
+const HIDE_CLASS = "is-city-hidden";
+const READY_CLASS = "is-city-ready";
+const SAFETY_PASS_DELAYS = [
+    500,
+    1500,
+    3500
+];
+/** Dedupe warnings: one warning per (attr value, unknown token) pair. */ const warnedValues = new Set();
+/**
+ * @param {HTMLElement} el
+ * @param {string | null} activeSlug
+ * @param {Array<{slug: string, name: string}>} cities
+ */ function applyVisibility(el, activeSlug, cities) {
+    const attr = el.getAttribute(ATTR);
+    const { visible, unknownValues } = (0, _cityVisibilityDecideJs.shouldShow)(attr, activeSlug, cities);
+    el.classList.toggle(HIDE_CLASS, !visible);
+    for (const v of unknownValues){
+        const key = `${attr}|${v}`;
+        if (warnedValues.has(key)) continue;
+        warnedValues.add(key);
+        console.warn(`[bruce.city-visibility] data-city-show="${attr}" \u{2014} value "${v}" matched no known city.`, "Known cities:", cities.map((c)=>({
+                slug: c.slug,
+                name: c.name
+            })));
+    }
+}
+/**
+ * Sweep every `[data-city-show]` element in the document. Sets the
+ * `is-city-ready` body class once a sweep completes with a non-null slug,
+ * which drops the global pre-hide rule.
+ */ function sweep() {
+    const api = /** @type {any} */ window.bruce?.city;
+    if (!api) return;
+    const activeSlug = api.get();
+    const cities = api.all();
+    document.querySelectorAll(`[${ATTR}]`).forEach((el)=>{
+        applyVisibility(/** @type {HTMLElement} */ el, activeSlug, cities);
+    });
+    if (activeSlug) document.body.classList.add(READY_CLASS);
+}
+// ── Debounced re-sweep ───────────────────────────────────────
+// A burst of mutations or simultaneous onChange + insert triggers one pass.
+let pendingRafId = 0;
+const scheduleSweep = ()=>{
+    if (pendingRafId) return;
+    pendingRafId = requestAnimationFrame(()=>{
+        pendingRafId = 0;
+        sweep();
+    });
+};
+// ── MutationObserver: catch late inserts ─────────────────────
+// Cheap pre-filter (matches + querySelector only, no walk) — same pattern
+// as src/city.js's observer. Webflow pages mutate constantly; expensive
+// per-node walks would dominate the main thread.
+const observer = new MutationObserver((mutations)=>{
+    for (const m of mutations)for (const node of m.addedNodes){
+        if (node.nodeType !== 1) continue;
+        const el = /** @type {Element} */ node;
+        if (el.matches?.(`[${ATTR}]`) || el.querySelector?.(`[${ATTR}]`)) {
+            scheduleSweep();
+            return;
+        }
+    }
+});
+// ── Boot ─────────────────────────────────────────────────────
+// Subscribes to city.onChange, runs an initial sweep, then arms the
+// observer + safety-pass timers. Called at most once per page load.
+const boot = ()=>{
+    const api = /** @type {any} */ window.bruce?.city;
+    api?.onChange?.(()=>sweep());
+    sweep(); // may run with null slug → all data-city-show get is-city-hidden,
+    // body.is-city-ready stays unset, pre-hide remains. onChange or a safety
+    // pass will re-run once city.js resolves.
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+    SAFETY_PASS_DELAYS.forEach((ms)=>setTimeout(()=>{
+            if (!document.body.classList.contains(READY_CLASS)) sweep();
+        }, ms));
+};
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, {
+    once: true
+});
+else boot();
+
+},{"./city-visibility-decide.js":"dWhxv"}],"dWhxv":[function(require,module,exports,__globalThis) {
+/**
+ * Pure decision helper for the city-visibility module (city-visibility.js).
+ * Framework-free (no DOM, no globals) so the "is this element visible in the
+ * active city" rules live in one unit-testable place — mirroring the
+ * studios-city-select.js / studios-city-filter.js split.
+ */ /**
+ * Decide whether an element should be visible given its `data-city-show`
+ * attribute value and the currently-active city slug.
+ *
+ * Returns `{ visible, unknownValues }` so the caller can warn once per
+ * unknown value rather than per element.
+ *
+ * Semantics:
+ *   - null/empty/whitespace-only attribute → always visible (no-op).
+ *   - comma-separated values, each trimmed.
+ *   - non-empty attribute but null active slug → hidden (fails closed
+ *     while city.js is still resolving).
+ *   - case-insensitive match against city.slug AND city.name (mirrors
+ *     citiesFromUrl() in src/city.js so editors can use either).
+ *   - tokens that match no city are listed in `unknownValues`.
+ *
+ * @param {string | null} attrValue
+ * @param {string | null} activeSlug
+ * @param {Array<{slug: string, name: string}>} cities
+ * @returns {{ visible: boolean, unknownValues: string[] }}
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+parcelHelpers.export(exports, "shouldShow", ()=>shouldShow);
+function shouldShow(attrValue, activeSlug, cities) {
+    const raw = (attrValue ?? "").trim();
+    if (raw === "") return {
+        visible: true,
+        unknownValues: []
+    };
+    const tokens = raw.split(",").map((t)=>t.trim().toLowerCase()).filter(Boolean);
+    if (tokens.length === 0) return {
+        visible: true,
+        unknownValues: []
+    };
+    if (!activeSlug) return {
+        visible: false,
+        unknownValues: []
+    };
+    const activeLower = activeSlug.toLowerCase();
+    let visible = false;
+    const unknownValues = [];
+    for (const t of tokens){
+        const match = cities.find((c)=>c.slug.toLowerCase() === t || c.name.toLowerCase() === t);
+        if (!match) {
+            unknownValues.push(t);
+            continue;
+        }
+        if (match.slug.toLowerCase() === activeLower) visible = true;
+    }
+    return {
+        visible,
+        unknownValues
+    };
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"WOwQU":[function(require,module,exports,__globalThis) {
+/**
+ * Location
+ *
+ * Browser geolocation, centralized so multiple modules can share the
+ * permission prompt and session cache. Pure browser-API wrapper — no
+ * dependency on Mapbox or any other library.
+ *
+ * ── Public API ───────────────────────────────────────────────
+ *   window.bruce.location.requestUserLocation()
+ *     Always issues a fresh geolocation request. Resolves [lng, lat]
+ *     on success, null on denial / timeout / unavailable. Updates the
+ *     last-known cache on success.
+ *
+ *   window.bruce.location.getInitialUserLocation()
+ *     Shared session-scoped promise. First call kicks off the request;
+ *     subsequent calls reuse the same in-flight or settled promise.
+ *     Use this to coordinate boot-time location reads across modules
+ *     without double-prompting.
+ *
+ *   window.bruce.location.getLastKnown()
+ *     Synchronous accessor. Returns the most recent successful coord,
+ *     or null. Never triggers a prompt, never throws. A later failed
+ *     request does NOT wipe a previously-cached success.
+ *
+ * Each function is also exported as an ES module named export.
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// Browser geolocation → [lng, lat] or null on denial / timeout / unavailable.
+// External timeout guards against stuck permission prompts (the native
+// `timeout` option only counts time after permission is granted).
+parcelHelpers.export(exports, "requestUserLocation", ()=>requestUserLocation);
+// Shared across modules so the permission prompt only fires once per session.
+parcelHelpers.export(exports, "getInitialUserLocation", ()=>getInitialUserLocation);
+parcelHelpers.export(exports, "getLastKnown", ()=>getLastKnown);
+const USER_LOCATION_TIMEOUT = 8000;
+/** @type {[number, number] | null} */ let lastKnown = null;
+/** @type {Promise<[number, number] | null> | null} */ let initialLocationPromise = null;
+function requestUserLocation() {
+    return new Promise((resolve)=>{
+        if (!navigator.geolocation) return resolve(null);
+        let settled = false;
+        const finish = (result)=>{
+            if (settled) return;
+            settled = true;
+            if (result) lastKnown = result;
+            resolve(result);
+        };
+        const timer = setTimeout(()=>finish(null), USER_LOCATION_TIMEOUT);
+        navigator.geolocation.getCurrentPosition((pos)=>{
+            clearTimeout(timer);
+            finish([
+                pos.coords.longitude,
+                pos.coords.latitude
+            ]);
+        }, ()=>{
+            clearTimeout(timer);
+            finish(null);
+        }, {
+            timeout: USER_LOCATION_TIMEOUT,
+            maximumAge: 60000,
+            enableHighAccuracy: false
+        });
+    });
+}
+function getInitialUserLocation() {
+    if (!initialLocationPromise) initialLocationPromise = requestUserLocation();
+    return initialLocationPromise;
+}
+function getLastKnown() {
+    return lastKnown;
+}
+/** @type {any} */ window.bruce ||= {};
+/** @type {any} */ window.bruce.location = {
+    requestUserLocation,
+    getInitialUserLocation,
+    getLastKnown
+};
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"eacga":[function(require,module,exports,__globalThis) {
+/**
+ * Studios Search Redirect (off-page searchbar)
+ *
+ * The studios searchbar (free-text query + filter dropdowns) appears on pages
+ * where `studios.js` does NOT run. On those pages the searchbar has nothing to
+ * filter, so this module turns it into a redirect: it collects the typed query
+ * plus every checked filter and sends the visitor to the search page with all
+ * of it applied via URL params. Active-filter count badges are reflected via
+ * the shared `studios-filter-count` util.
+ *
+ * On the live search page (`/s`) this module no-ops entirely — the searchbar
+ * there is owned by `studios.js` + Finsweet, which drives the same count util.
+ *
+ * ── Webflow markup ───────────────────────────────────────────
+ * Author the off-page searchbar as a form marked `data-studios-search`:
+ *
+ *   <form data-studios-search action="/s">
+ *     <input type="search"   name="q">                       <!-- free text  -->
+ *     <input type="radio"    name="tier"     value="BASE">    <!-- single group -->
+ *     <input type="checkbox" name="city"     value="Bergen">  <!-- multi group  -->
+ *     <input type="checkbox" name="category" value="Yoga">    <!-- multi group  -->
+ *     <button type="submit">Search</button>
+ *   </form>
+ *
+ *   - `data-studios-search` on the <form> is the bind marker.
+ *   - `action` is the redirect path (defaults to `/s` if absent/empty).
+ *   - Each filter input's `name` is the Finsweet field key (`city`, `category`,
+ *     `tier` — i.e. the checkbox `fs-list-field` on the search page); its
+ *     `value` is the filter value. Selection state is native `:checked`.
+ *   - Single-value group → `radio`; multi-value group → `checkbox`.
+ *   - Enter-to-submit and accessibility come from the native form.
+ *   - Count badges / active-state styling: see `studios-filter-count.js` for
+ *     the `data-search-count` / `data-search-group` hooks.
+ *   - Optional clear controls: `[data-search-clear]` clears all groups,
+ *     `[data-search-clear="city_equal"]` clears one. See "Clearing" below.
+ *
+ * ── URL format ───────────────────────────────────────────────
+ * Clean, shareable params: each selected value is a `key=value` pair, with
+ * repeated keys for multi-select — `/s?q=boxing&city=Bergen&city=Oslo&category=Yoga`.
+ * The free-text query is a trimmed `q`. Empty groups and an empty query are
+ * omitted; submitting with nothing set redirects to the bare action. On the
+ * search page, `studios.js` reads these and applies them to the Finsweet
+ * filters (which then takes over the URL in its own format).
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Serialize a searchbar form's fields into a clean URL query string (no leading
+ * "?", already URL-encoded). Pure — depends only on its FormData argument.
+ *
+ * Each filter input's `name` is the Finsweet field key (`city`, `category`,
+ * `tier`); multiple selected values become repeated keys
+ * (`city=Bergen&city=Oslo`). The free-text query is `q`, trimmed and omitted
+ * when empty. `studios.js` reads these on the search page and applies them to
+ * the Finsweet filters.
+ *
+ * @param {FormData} formData
+ * @returns {string}
+ */ parcelHelpers.export(exports, "buildSearchQuery", ()=>buildSearchQuery);
+/** Initialize all off-page redirect forms. Safe to call multiple times. */ parcelHelpers.export(exports, "initStudiosSearchRedirect", ()=>initStudiosSearchRedirect);
+var _studiosFilterCountJs = require("./studios-filter-count.js");
+const FORM_SELECTOR = "form[data-studios-search]";
+const LIVE_COMPONENT_SELECTOR = '[data-studios-element="component"]';
+const CLEAR_SELECTOR = "[data-search-clear]";
+const QUERY_FIELD = "q";
+const DEFAULT_ACTION = "/s";
+function buildSearchQuery(formData) {
+    const params = new URLSearchParams();
+    const query = (formData.get(QUERY_FIELD) ?? "").toString().trim();
+    if (query) params.set(QUERY_FIELD, query);
+    // Append every non-query field's checked values in DOM order, so the URL is
+    // stable and readable. Repeated keys carry multi-select groups.
+    for (const [key, value] of formData.entries()){
+        if (key === QUERY_FIELD) continue;
+        params.append(key, value.toString());
+    }
+    return params.toString();
+}
+/** @param {HTMLFormElement} form */ function handleSubmit(form, event) {
+    event.preventDefault();
+    const action = form.getAttribute("action") || DEFAULT_ACTION;
+    const query = buildSearchQuery(new FormData(form));
+    window.location.assign(query ? `${action}?${query}` : action);
+}
+// ── Clearing ─────────────────────────────────────────────────
+// A click on `[data-search-clear]` unchecks filter options and refreshes the
+// counts. Empty value clears every group; `data-search-clear="city_equal"`
+// clears just that group. The text query is never touched. preventDefault keeps
+// a clear button/link from submitting the form.
+/**
+ * @param {HTMLFormElement} form
+ * @param {Element} trigger
+ */ function handleClear(form, trigger) {
+    const group = trigger.getAttribute("data-search-clear");
+    const selector = group ? `input[name="${CSS.escape(group)}"]` : "input[type=checkbox], input[type=radio]";
+    form.querySelectorAll(selector).forEach((el)=>{
+        const input = /** @type {HTMLInputElement} */ el;
+        if (input.type === "checkbox" || input.type === "radio") input.checked = false;
+    });
+    // Programmatic `.checked` changes don't fire `change`, so refresh directly.
+    (0, _studiosFilterCountJs.updateFilterCounts)(form);
+}
+function initStudiosSearchRedirect() {
+    // The live search page owns its searchbar (Finsweet + studios.js).
+    if (document.querySelector(LIVE_COMPONENT_SELECTOR)) return;
+    document.querySelectorAll(FORM_SELECTOR).forEach((el)=>{
+        const form = /** @type {HTMLFormElement} */ el;
+        if (form.dataset.searchRedirectInit) return;
+        form.dataset.searchRedirectInit = "true";
+        form.addEventListener("submit", (event)=>handleSubmit(form, event));
+        form.addEventListener("change", ()=>(0, _studiosFilterCountJs.updateFilterCounts)(form));
+        form.addEventListener("click", (event)=>{
+            const target = event.target;
+            if (!(target instanceof Element)) return;
+            const trigger = target.closest(CLEAR_SELECTOR);
+            if (!trigger) return;
+            event.preventDefault();
+            handleClear(form, trigger);
+        });
+        (0, _studiosFilterCountJs.updateFilterCounts)(form);
+    });
+}
+// ── Auto-boot ────────────────────────────────────────────────
+// Guarded so the module stays importable in Node (unit tests) where there is
+// no `document`.
+if (typeof document !== "undefined") {
+    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initStudiosSearchRedirect, {
+        once: true
+    });
+    else initStudiosSearchRedirect();
+}
+
+},{"./studios-filter-count.js":"km8B3","@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"km8B3":[function(require,module,exports,__globalThis) {
+/**
+ * Studios Filter Count
+ *
+ * Shared count/state reflection for the studios searchbar, used by both the
+ * off-page redirect searchbar (`studios-search-redirect.js`) and the live
+ * search page, where `studios.js` drives it from its Finsweet `afterRender` hook.
+ *
+ * Reflects the current filter selection of a form into the DOM so Webflow can
+ * style "has active filters" UI (e.g. a count badge) without custom JS:
+ *
+ *   - The form gets `data-has-filters="true|false"` and `data-filter-count`
+ *     for the TOTAL number of checked filter options.
+ *   - `[data-search-group="city_equal"]` elements get the same two attributes
+ *     scoped to that one group — style each dropdown toggle independently.
+ *   - `[data-search-count]` elements get their textContent set to the count:
+ *     the total when the attribute is empty, or a group's count when it names
+ *     one (`data-search-count="city_equal"`).
+ *
+ * Pure, no auto-boot — consumers decide when to call updateFilterCounts and on
+ * which events (change, init, Finsweet afterRender).
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+/**
+ * Tally checked filter inputs by group. Pure — takes the list of `name`s of
+ * the checked inputs (in DOM order) and returns the total plus a per-name count.
+ *
+ * @param {string[]} names
+ * @returns {{ total: number, byGroup: Map<string, number> }}
+ */ parcelHelpers.export(exports, "tallyCheckedFilters", ()=>tallyCheckedFilters);
+/**
+ * Reflect a form's current filter selection into the DOM hooks above.
+ * @param {HTMLFormElement} form
+ */ parcelHelpers.export(exports, "updateFilterCounts", ()=>updateFilterCounts);
+const QUERY_FIELD = "q";
+const COUNT_SELECTOR = "[data-search-count]";
+const GROUP_STATE_SELECTOR = "[data-search-group]";
+function tallyCheckedFilters(names) {
+    const byGroup = new Map();
+    for (const name of names)byGroup.set(name, (byGroup.get(name) ?? 0) + 1);
+    return {
+        total: names.length,
+        byGroup
+    };
+}
+function updateFilterCounts(form) {
+    // The same filter option can appear several times inside one form (e.g. the
+    // search page renders the filters in a modal, the nav searchbar, AND the
+    // toolbar, all kept in sync by Finsweet). Dedupe by name+value so a value
+    // selected across those copies counts once, not once per copy.
+    const seen = new Set();
+    const names = [];
+    for (const el of form.querySelectorAll("input:checked")){
+        const input = /** @type {HTMLInputElement} */ el;
+        if (!input.name || input.name === QUERY_FIELD) continue;
+        const key = `${input.name} ${input.value}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        names.push(input.name);
+    }
+    const { total, byGroup } = tallyCheckedFilters(names);
+    form.dataset.hasFilters = total > 0 ? "true" : "false";
+    form.dataset.filterCount = String(total);
+    form.querySelectorAll(GROUP_STATE_SELECTOR).forEach((el)=>{
+        const group = el.getAttribute("data-search-group") || "";
+        const count = byGroup.get(group) ?? 0;
+        const node = /** @type {HTMLElement} */ el;
+        node.dataset.hasFilters = count > 0 ? "true" : "false";
+        node.dataset.filterCount = String(count);
+    });
+    form.querySelectorAll(COUNT_SELECTOR).forEach((el)=>{
+        const group = el.getAttribute("data-search-count");
+        el.textContent = String(group ? byGroup.get(group) ?? 0 : total);
+    });
+}
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"f7KXl":[function(require,module,exports,__globalThis) {
+/**
+ * Slider Component
+ *
+ * Swiper-based slider with Finsweet List integration, CMS flattening,
+ * and dynamic content support.
+ *
+ * Usage in Webflow:
+ *   <div data-slider="component">
+ *     <div class="slider_element"
+ *          data-follow-finger="True|False"   (default True)
+ *          data-free-mode="True|False"        (default False)
+ *          data-mousewheel="True|False"       (default False)
+ *          data-slide-to-clicked="True|False" (default False)
+ *          data-centered="True|False"         (default False)
+ *          data-loop="True|False"             (default False)
+ *          data-speed="600"                   (default 600ms)
+ *          data-initial-slide="0"             (default 0)
+ *     >
+ *       <div class="slider_list">
+ *         <!-- slides -->
+ *       </div>
+ *     </div>
+ *     <div class="slider_bullet_list"></div>          (optional pagination)
+ *     <div data-slider="next"><button></button></div>  (optional)
+ *     <div data-slider="previous"><button></button></div>
+ *   </div>
+ *
+ * Loaded globally — Swiper is loaded via CDN in Site Settings.
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Public API ───────────────────────────────────────────────
+/**
+ * Initialize all slider components currently in the DOM.
+ * Safe to call multiple times — already-initialized components are skipped.
+ */ parcelHelpers.export(exports, "initSliders", ()=>initSliders);
+/**
+ * Initialize a specific slider component. Useful for dynamically inserted
+ * components.
+ *
+ * @param {HTMLElement} element
+ */ parcelHelpers.export(exports, "initSlider", ()=>initSlider);
+var _utilsJs = require("./utils.js");
+// ── Module-level constants ───────────────────────────────────
+const SLIDER_SELECTOR = "[data-slider='component']:not([data-slider='component'] [data-slider='component'])";
+// ── Init a single slider component ───────────────────────────
+/**
+ * @param {HTMLElement} component
+ */ function initComponent(component) {
+    if (component.dataset.scriptInitialized) return;
+    const swiperElement = component.querySelector(".slider_element");
+    const swiperWrapper = component.querySelector(".slider_list");
+    if (!swiperElement || !swiperWrapper) return;
+    // Restructure DOM for Swiper compatibility
+    (0, _utilsJs.flattenDisplayContents)(swiperWrapper);
+    (0, _utilsJs.removeCMSList)(swiperWrapper);
+    [
+        ...swiperWrapper.children
+    ].forEach((el)=>el.classList.add("swiper-slide"));
+    const slideCount = swiperWrapper.children.length;
+    // Empty list — wait for Finsweet/observer to call us again
+    if (slideCount === 0) return;
+    // Mark initialized only once we're committed (past the empty-list guard)
+    component.dataset.scriptInitialized = "true";
+    // ── Read configuration attributes ─────────────────────
+    const followFinger = swiperElement.getAttribute("data-follow-finger") !== "False";
+    const freeMode = (0, _utilsJs.attrBool)(swiperElement, "data-free-mode");
+    const mousewheel = (0, _utilsJs.attrBool)(swiperElement, "data-mousewheel");
+    const slideToClickedSlide = (0, _utilsJs.attrBool)(swiperElement, "data-slide-to-clicked");
+    const centeredSlides = (0, _utilsJs.attrBool)(swiperElement, "data-centered");
+    const loop = (0, _utilsJs.attrBool)(swiperElement, "data-loop");
+    const speed = (0, _utilsJs.attrNum)(swiperElement, "data-speed", 600);
+    const initialSlide = Math.min((0, _utilsJs.attrNum)(swiperElement, "data-initial-slide", 0), slideCount - 1);
+    // ── Resolve nav + pagination elements ─────────────────
+    const paginationEl = component.querySelector(".slider_bullet_list");
+    const nextEls = [
+        ...component.querySelectorAll("[data-slider='next'] button")
+    ];
+    const prevEls = [
+        ...component.querySelectorAll("[data-slider='previous'] button")
+    ];
+    // ── Build Swiper instance ─────────────────────────────
+    // eslint-disable-next-line no-new
+    const swiper = new Swiper(swiperElement, {
+        slidesPerView: "auto",
+        followFinger,
+        loop,
+        loopAdditionalSlides: loop ? 10 : 0,
+        freeMode,
+        slideToClickedSlide,
+        centeredSlides,
+        centeredSlidesBounds: centeredSlides,
+        autoHeight: false,
+        initialSlide,
+        speed,
+        mousewheel: {
+            enabled: mousewheel,
+            forceToAxis: true
+        },
+        keyboard: {
+            enabled: true,
+            onlyInViewport: true
+        },
+        navigation: nextEls.length && prevEls.length ? {
+            nextEl: nextEls,
+            prevEl: prevEls
+        } : false,
+        pagination: paginationEl ? {
+            el: paginationEl,
+            bulletActiveClass: "is-active",
+            bulletClass: "slider_bullet_item",
+            bulletElement: "button",
+            clickable: true
+        } : false,
+        slideActiveClass: "is-active",
+        slideDuplicateActiveClass: "is-active"
+    });
+    // Expose for external access (e.g. coordinating with video state)
+    /** @type {any} */ component._swiper = swiper;
+}
+function initSliders() {
+    document.querySelectorAll(SLIDER_SELECTOR).forEach((el)=>{
+        initComponent(/** @type {HTMLElement} */ el);
+    });
+}
+function initSlider(element) {
+    if (element && element.matches(SLIDER_SELECTOR)) initComponent(element);
+}
+// ── Finsweet integration ─────────────────────────────────────
+// Re-init sliders once Finsweet has populated CMS lists. Uses the global
+// FinsweetAttributes queue, which Finsweet processes when its script loads.
+/** @type {any} */ window.FinsweetAttributes ||= [];
+/** @type {any} */ window.FinsweetAttributes.push([
+    "list",
+    /** @param {Array<{loadingPromise?: Promise<unknown>}>} lists */ (lists)=>{
+        Promise.all(lists.map((l)=>l.loadingPromise || Promise.resolve())).then(initSliders);
+    }
+]);
+// ── MutationObserver: catch dynamic content from other sources ───
+// Handles cases where slides appear via non-Finsweet means (manual JS,
+// Webflow CMS pagination, etc.). Debounced via rAF to avoid thrashing
+// during bulk DOM inserts.
+let mutationRafId = 0;
+let pendingMutations = false;
+const processMutations = ()=>{
+    mutationRafId = 0;
+    if (!pendingMutations) return;
+    pendingMutations = false;
+    initSliders();
+};
+const scheduleMutationProcess = ()=>{
+    pendingMutations = true;
+    if (mutationRafId) return;
+    mutationRafId = requestAnimationFrame(processMutations);
+};
+const mutationObserver = new MutationObserver((mutations)=>{
+    for (const m of mutations)for (const node of m.addedNodes){
+        if (node.nodeType !== 1) continue;
+        const el = /** @type {Element} */ node;
+        // Quick check: is this a CMS item, or does it contain one?
+        const isDynItem = el.matches?.(".w-dyn-item") || el.querySelector?.(".w-dyn-item");
+        if (!isDynItem) continue;
+        // Is it inside or containing an un-initialized slider?
+        const slider = el.closest?.(SLIDER_SELECTOR) || el.querySelector?.(SLIDER_SELECTOR);
+        if (slider && !/** @type {HTMLElement} */ slider.dataset.scriptInitialized) {
+            scheduleMutationProcess();
+            return;
+        }
+    }
+});
+mutationObserver.observe(document.body, {
+    childList: true,
+    subtree: true
+});
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initSliders, {
+    once: true
+});
+else initSliders();
+
+},{"./utils.js":"en4he","@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"1ivZR":[function(require,module,exports,__globalThis) {
+/**
+ * Tab Component
+ *
+ * Accessible tab pattern with optional autoplay, accordion mode, and
+ * Finsweet CMS integration. No external dependencies.
+ *
+ * Autoplay drives a `--progress` custom property (0→1) on `.tab_wrap` via
+ * requestAnimationFrame, so any CSS keyed off that variable updates each
+ * frame. Panel switches and accordion-variant content toggle instantly —
+ * style transitions live in CSS, not here.
+ *
+ * Usage in Webflow:
+ *   <div class="tab_wrap"
+ *        data-loop-controls="True|False"        (default False)
+ *        data-pause-on-hover="True|False"        (default False)
+ *        data-autoplay-duration="5"              (seconds; 0 = off)
+ *        data-tab-component-id="features"        (optional, for deep linking)
+ *   >
+ *     <div class="tab_button_list">
+ *       <div data-wf--tab-link--variant="default|accordion"
+ *            data-tab-item-id="overview">
+ *         <button>...</button>
+ *         <div data-tab-link-content>...</div>  (accordion variant only)
+ *       </div>
+ *     </div>
+ *     <div class="tab_content_list">
+ *       <div>panel content</div>
+ *     </div>
+ *     <div data-tab="previous"><button></button></div>  (optional)
+ *     <div data-tab="next"><button></button></div>       (optional)
+ *     <div data-tab-button="toggle"><button></button></div>  (optional autoplay toggle)
+ *   </div>
+ *
+ * Deep linking: ?tab-id=features-overview activates that tab on load.
+ */ var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Public API ───────────────────────────────────────────────
+/**
+ * Initialize all tab components currently in the DOM.
+ * Safe to call multiple times — already-initialized components are skipped.
+ */ parcelHelpers.export(exports, "initTabs", ()=>initTabs);
+/**
+ * Initialize a specific tab component.
+ * @param {HTMLElement} element
+ */ parcelHelpers.export(exports, "initTab", ()=>initTab);
+var _utilsJs = require("./utils.js");
+// ── Module-level constants ───────────────────────────────────
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+// ── Helpers ──────────────────────────────────────────────────
+/** @param {string} value */ function slugify(value) {
+    return value.toLowerCase().replaceAll(" ", "-");
+}
+// ── Init a single tab component ──────────────────────────────
+/**
+ * @param {HTMLElement} tabWrap
+ * @param {number} componentIndex
+ */ function initComponent(tabWrap, componentIndex) {
+    if (tabWrap.dataset.scriptInitialized) return;
+    // ── Props ──────────────────────────────────────────────
+    const loopControls = (0, _utilsJs.attrBool)(tabWrap, "data-loop-controls");
+    const pauseOnHover = (0, _utilsJs.attrBool)(tabWrap, "data-pause-on-hover");
+    let autoplay = (0, _utilsJs.attrNum)(tabWrap, "data-autoplay-duration", 0);
+    // ── Required DOM ───────────────────────────────────────
+    const buttonList = /** @type {HTMLElement | null} */ tabWrap.querySelector(".tab_button_list");
+    const panelList = /** @type {HTMLElement | null} */ tabWrap.querySelector(".tab_content_list");
+    if (!buttonList || !panelList) {
+        console.warn("Tab component missing .tab_button_list or .tab_content_list:", tabWrap);
+        return;
+    }
+    // ── Optional controls ──────────────────────────────────
+    const previousButton = /** @type {HTMLButtonElement | null} */ tabWrap.querySelector("[data-tab='previous'] button");
+    const nextButton = /** @type {HTMLButtonElement | null} */ tabWrap.querySelector("[data-tab='next'] button");
+    const toggleWrap = /** @type {HTMLElement | null} */ tabWrap.querySelector("[data-tab-button='toggle']");
+    const toggleButton = /** @type {HTMLButtonElement | null} */ tabWrap.querySelector("[data-tab-button='toggle'] button");
+    // ── Restructure DOM ────────────────────────────────────
+    (0, _utilsJs.flattenDisplayContents)(buttonList);
+    (0, _utilsJs.flattenDisplayContents)(panelList);
+    (0, _utilsJs.removeCMSList)(buttonList);
+    (0, _utilsJs.removeCMSList)(panelList);
+    // ── Resolve buttons + wraps ────────────────────────────
+    /** @type {HTMLElement[]} */ const buttonItems = Array.from(buttonList.children).map((child)=>/** @type {HTMLElement} */ child.querySelector("button") || child);
+    /** @type {HTMLElement[]} */ const buttonWraps = buttonItems.map((btn)=>{
+        let wrap = btn;
+        while(wrap.parentElement && wrap.parentElement !== buttonList)wrap = wrap.parentElement;
+        return wrap;
+    });
+    // Strip ARIA from wraps (only the inner buttons own the roles)
+    buttonWraps.forEach((wrap, i)=>{
+        if (wrap !== buttonItems[i]) {
+            wrap.removeAttribute("role");
+            wrap.removeAttribute("aria-selected");
+            wrap.removeAttribute("aria-controls");
+            wrap.removeAttribute("tabindex");
+        }
+    });
+    /** @type {HTMLElement[]} */ const panelItems = Array.from(panelList.children).map((c)=>/** @type {HTMLElement} */ c);
+    if (!buttonItems.length || !panelItems.length) {
+        console.warn("Tab component has no buttons or panels:", tabWrap);
+        return;
+    }
+    // Per-button accordion content slot (null for non-accordion variants).
+    /** @type {Array<HTMLElement | null>} */ const accordionContents = buttonWraps.map((wrap)=>{
+        if (wrap.getAttribute("data-wf--tab-link--variant") !== "accordion") return null;
+        const content = /** @type {HTMLElement | null} */ wrap.querySelector("[data-tab-link-content]");
+        if (!content) return null;
+        content.style.display = "none";
+        return content;
+    });
+    // ── Initial ARIA setup ─────────────────────────────────
+    buttonList.setAttribute("role", "tablist");
+    panelList.removeAttribute("role");
+    panelItems.forEach((panel)=>{
+        panel.style.display = "none";
+        panel.setAttribute("role", "tabpanel");
+    });
+    buttonItems.forEach((btn)=>btn.setAttribute("role", "tab"));
+    // ── State ──────────────────────────────────────────────
+    let activeIndex = -1;
+    /** @type {{play: () => void, pause: () => void, restart: () => void} | null} */ let autoplayTl = null;
+    // True when the user has explicitly paused autoplay via the toggle button.
+    // (Name reflects intent — `updateAuto` keeps the cycle paused while this is true.)
+    let userPaused = true;
+    // Mark initialized after DOM restructuring but before behavior wiring
+    // (so re-entry calls from MutationObservers bail out)
+    tabWrap.dataset.scriptInitialized = "true";
+    /**
+   * Activate a tab by index.
+   *
+   * @param {number} index
+   * @param {boolean} [focus]
+   */ const makeActive = (index, focus = false)=>{
+        if (index === activeIndex) return;
+        const previousIndex = activeIndex;
+        /** @param {number} i @param {boolean} isActive */ const setButtonActive = (i, isActive)=>{
+            const btn = buttonItems[i];
+            btn.classList.toggle("is-active", isActive);
+            if (buttonWraps[i] !== btn) buttonWraps[i].classList.toggle("is-active", isActive);
+            btn.setAttribute("aria-selected", isActive ? "true" : "false");
+            btn.setAttribute("tabindex", isActive ? "0" : "-1");
+            if (accordionContents[i]) btn.setAttribute("aria-expanded", isActive ? "true" : "false");
+        };
+        // First activation: seed every button into a known state.
+        // Subsequent switches: only touch the two indices that changed.
+        if (previousIndex === -1) {
+            buttonItems.forEach((_, i)=>setButtonActive(i, i === index));
+            panelItems.forEach((panel, i)=>panel.classList.toggle("is-active", i === index));
+        } else {
+            setButtonActive(previousIndex, false);
+            setButtonActive(index, true);
+            panelItems[previousIndex]?.classList.toggle("is-active", false);
+            panelItems[index]?.classList.toggle("is-active", true);
+        }
+        // Update prev/next disabled state
+        if (nextButton) nextButton.disabled = index === buttonItems.length - 1 && !loopControls;
+        if (previousButton) previousButton.disabled = index === 0 && !loopControls;
+        if (focus) buttonItems[index].focus();
+        // Toggle accordion-variant content visibility
+        if (previousIndex !== -1 && accordionContents[previousIndex]) /** @type {HTMLElement} */ accordionContents[previousIndex].style.display = "none";
+        if (accordionContents[index]) /** @type {HTMLElement} */ accordionContents[index].style.display = "block";
+        // Swap panels — instant; any visible transition belongs in CSS
+        if (previousIndex !== -1 && panelItems[previousIndex]) panelItems[previousIndex].style.display = "none";
+        if (panelItems[index]) panelItems[index].style.display = "block";
+        // Reset autoplay progress on user-driven changes — clicking a tab restarts
+        // the timer for the new tab. `userPaused` blocks the restart so a cycle
+        // the user has explicitly paused stays paused.
+        if (autoplayTl && !userPaused) autoplayTl.restart();
+        // Scroll active button into view (only if button list is horizontally scrollable)
+        if (buttonList.scrollWidth > buttonList.clientWidth) buttonList.scrollTo({
+            left: buttonWraps[index].offsetLeft,
+            behavior: "smooth"
+        });
+        activeIndex = index;
+    };
+    // ── Navigation ────────────────────────────────────────
+    /** @param {number} delta @param {boolean} [focus] */ const updateIndex = (delta, focus = false)=>makeActive((activeIndex + delta + buttonItems.length) % buttonItems.length, focus);
+    nextButton?.addEventListener("click", ()=>updateIndex(1));
+    previousButton?.addEventListener("click", ()=>updateIndex(-1));
+    // ── Per-button setup: IDs, click, keyboard, deep-link ──
+    const tabIdAttr = tabWrap.getAttribute("data-tab-component-id");
+    const tabId = tabIdAttr ? slugify(tabIdAttr) : String(componentIndex + 1);
+    const deepLinkId = new URLSearchParams(location.search).get("tab-id");
+    buttonItems.forEach((btn, index)=>{
+        const itemIdAttr = btn.getAttribute("data-tab-item-id");
+        const itemId = itemIdAttr ? slugify(itemIdAttr) : String(index + 1);
+        const buttonId = `tab-button-${tabId}-${itemId}`;
+        const panelId = `tab-panel-${tabId}-${itemId}`;
+        btn.setAttribute("id", buttonId);
+        btn.setAttribute("aria-controls", panelId);
+        panelItems[index]?.setAttribute("id", panelId);
+        panelItems[index]?.setAttribute("aria-labelledby", buttonId);
+        // Deep linking via ?tab-id=tabId-itemId
+        if (deepLinkId === `${tabId}-${itemId}`) // Defer activation until after initial makeActive(0) below
+        queueMicrotask(()=>{
+            makeActive(index);
+            autoplay = 0; // stop autoplay on deep-link
+            tabWrap.scrollIntoView({
+                behavior: "smooth",
+                block: "start"
+            });
+            const url = new URL(location.href);
+            url.searchParams.delete("tab-id");
+            history.replaceState({}, "", url);
+        });
+        btn.addEventListener("click", ()=>makeActive(index));
+        btn.addEventListener("keydown", (e)=>{
+            if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                e.preventDefault();
+                updateIndex(1, true);
+            } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                e.preventDefault();
+                updateIndex(-1, true);
+            } else if (e.key === "Home") {
+                e.preventDefault();
+                makeActive(0, true);
+            } else if (e.key === "End") {
+                e.preventDefault();
+                makeActive(buttonItems.length - 1, true);
+            }
+        });
+    });
+    // Activate first tab (or wait for deep-link microtask)
+    makeActive(0);
+    // ── Autoplay (rAF-driven; no external deps) ────────────
+    if (autoplay !== 0) {
+        const durationMs = autoplay * 1000;
+        let rafId = 0;
+        let cycleStart = 0; // performance.now() when current playing segment started
+        let elapsedBeforePause = 0; // ms accumulated from prior playing segments in this cycle
+        let isPlaying = false;
+        /** @param {number} p */ const setProgress = (p)=>{
+            tabWrap.style.setProperty("--progress", String(p));
+        };
+        /** @param {number} now */ const tick = (now)=>{
+            if (!isPlaying) return;
+            const elapsed = elapsedBeforePause + (now - cycleStart);
+            if (elapsed >= durationMs) {
+                setProgress(1);
+                isPlaying = false;
+                rafId = 0;
+                elapsedBeforePause = 0;
+                // Advance the tab; `makeActive` will call restart() if state allows.
+                updateIndex(1, false);
+                return;
+            }
+            setProgress(elapsed / durationMs);
+            rafId = requestAnimationFrame(tick);
+        };
+        const startCycle = ()=>{
+            if (rafId) cancelAnimationFrame(rafId);
+            elapsedBeforePause = 0;
+            cycleStart = performance.now();
+            isPlaying = true;
+            setProgress(0);
+            rafId = requestAnimationFrame(tick);
+        };
+        const pauseCycle = ()=>{
+            if (!isPlaying) return;
+            isPlaying = false;
+            if (rafId) {
+                cancelAnimationFrame(rafId);
+                rafId = 0;
+            }
+            elapsedBeforePause += performance.now() - cycleStart;
+        };
+        const resumeCycle = ()=>{
+            if (isPlaying) return;
+            // If the previous cycle had already completed before pause, start fresh
+            if (elapsedBeforePause >= durationMs) {
+                startCycle();
+                return;
+            }
+            cycleStart = performance.now();
+            isPlaying = true;
+            rafId = requestAnimationFrame(tick);
+        };
+        autoplayTl = {
+            play: resumeCycle,
+            pause: pauseCycle,
+            restart: startCycle
+        };
+        startCycle();
+        let isHovered = false;
+        let hasFocusInside = false;
+        let prefersReducedMotion = false;
+        let inView = true;
+        const updateAuto = ()=>{
+            if (prefersReducedMotion || !inView || userPaused || isHovered || hasFocusInside) autoplayTl?.pause();
+            else autoplayTl?.play();
+        };
+        const setButton = ()=>{
+            userPaused = !userPaused;
+            toggleButton?.setAttribute("aria-pressed", !userPaused ? "true" : "false");
+            toggleWrap?.classList.toggle("is-pressed", !userPaused);
+            if (!userPaused) {
+                isHovered = false;
+                hasFocusInside = false;
+                prefersReducedMotion = false;
+            }
+            updateAuto();
+        };
+        setButton();
+        toggleButton?.addEventListener("click", ()=>setButton());
+        /** @param {MediaQueryList | MediaQueryListEvent} e */ const handleMotionChange = (e)=>{
+            prefersReducedMotion = e.matches;
+            updateAuto();
+            userPaused = !e.matches;
+            setButton();
+        };
+        const motionMQ = window.matchMedia(REDUCED_MOTION_QUERY);
+        handleMotionChange(motionMQ);
+        motionMQ.addEventListener("change", handleMotionChange);
+        if (pauseOnHover) {
+            tabWrap.addEventListener("mouseenter", ()=>{
+                isHovered = true;
+                updateAuto();
+            });
+            tabWrap.addEventListener("mouseleave", ()=>{
+                hasFocusInside = false;
+                isHovered = false;
+                updateAuto();
+            });
+        }
+        tabWrap.addEventListener("focusin", ()=>{
+            hasFocusInside = true;
+            updateAuto();
+        });
+        tabWrap.addEventListener("focusout", (e)=>{
+            const related = /** @type {Element | null} */ e.relatedTarget;
+            if (!related || !tabWrap.contains(related)) {
+                hasFocusInside = false;
+                updateAuto();
+            }
+        });
+        new IntersectionObserver((entries)=>{
+            inView = entries[0].isIntersecting;
+            updateAuto();
+        }, {
+            threshold: 0
+        }).observe(tabWrap);
+    }
+    // Expose for external access
+    /** @type {any} */ tabWrap._tab = {
+        makeActive,
+        updateIndex,
+        get activeIndex () {
+            return activeIndex;
+        }
+    };
+}
+function initTabs() {
+    document.querySelectorAll(".tab_wrap").forEach((el, i)=>{
+        initComponent(/** @type {HTMLElement} */ el, i);
+    });
+}
+function initTab(element) {
+    if (element && element.classList.contains("tab_wrap")) // Use 0 as index — only matters as fallback when data-tab-component-id is absent
+    initComponent(element, 0);
+}
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initTabs, {
+    once: true
+});
+else initTabs();
+
+},{"./utils.js":"en4he","@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}],"2alcq":[function(require,module,exports,__globalThis) {
+/**
+ * Visual Video Component
+ *
+ * Plyr-based video player with:
+ * - Lazy-loading (IntersectionObserver + Swiper-aware deferral)
+ * - Aspect-ratio-aware cover sizing across all Lumos variants
+ * - State broadcasting to opt-in parent scopes via [data-video="component"]
+ * - Source-aspect override for vertical content (Shorts, Reels)
+ *
+ * Usage in Webflow:
+ *   <div class="video_wrap"
+ *        data-src="https://youtu.be/..."
+ *        data-source-aspect="16/9"   (optional, defaults to 16:9)
+ *        data-autoplay                (optional)
+ *        data-muted                   (optional, implied by autoplay)
+ *        data-loop                    (optional)
+ *        data-controls="none|minimal|full"  (default: full)
+ *        data-captions="https://.../captions.vtt"  (optional)
+ *   >
+ *     <div class="video_player"></div>
+ *     <div class="video_poster">
+ *       <img class="video_poster_image" src="..." />
+ *     </div>
+ *   </div>
+ *
+ * Optional parent scope (e.g. on a testimonial card):
+ *   <div data-video="component"> ... </div>
+ *
+ * The scope receives data-video-state="idle|playing|paused|ended"
+ * and can style its children accordingly.
+ */ // ── Module-level constants ───────────────────────────────────
+var parcelHelpers = require("@parcel/transformer-js/src/esmodule-helpers.js");
+parcelHelpers.defineInteropFlag(exports);
+// ── Public API ───────────────────────────────────────────────
+/**
+ * Initialize all .video_wrap components currently in the DOM.
+ * Safe to call multiple times — already-initialized components are skipped.
+ */ parcelHelpers.export(exports, "initVisualVideos", ()=>initVisualVideos);
+/**
+ * Initialize a specific .video_wrap element. Useful for dynamically inserted
+ * components (e.g. after fetching CMS items via Finsweet List Load).
+ *
+ * @param {HTMLElement} element
+ */ parcelHelpers.export(exports, "initVisualVideo", ()=>initVisualVideo);
+const DEFAULT_ASPECT = 16 / 9;
+const LAZY_ROOT_MARGIN = "200px";
+const SWIPER_ACTIVE_CLASSES = [
+    "swiper-slide-active",
+    "swiper-slide-visible",
+    "swiper-slide-next",
+    "swiper-slide-prev"
+];
+const CONTROLS_MAP = {
+    full: [
+        "play",
+        "progress",
+        "current-time",
+        "mute",
+        "volume",
+        "captions",
+        "settings",
+        "pip",
+        "airplay",
+        "fullscreen"
+    ],
+    minimal: [
+        "play",
+        "progress",
+        "mute",
+        "fullscreen"
+    ],
+    none: []
+};
+// Pre-compiled regexes
+const RE_YOUTUBE = /youtube\.com|youtu\.be/;
+const RE_VIMEO = /vimeo\.com/;
+const RE_YT_ID = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([^?&#]+)/;
+const RE_VIMEO_ID = /vimeo\.com\/(?:video\/)?(\d+)/;
+// ── Types ────────────────────────────────────────────────────
+/** @typedef {'youtube' | 'vimeo' | 'html5'} Provider */ /** @typedef {'idle' | 'playing' | 'paused' | 'ended'} VideoState */ // ── Helpers ──────────────────────────────────────────────────
+/**
+ * @param {string} url
+ * @returns {Provider}
+ */ function detectProvider(url) {
+    if (RE_YOUTUBE.test(url)) return "youtube";
+    if (RE_VIMEO.test(url)) return "vimeo";
+    return "html5";
+}
+/**
+ * @param {string} url
+ * @param {Provider} prov
+ * @returns {string}
+ */ function extractEmbedId(url, prov) {
+    if (prov === "youtube") return (url.match(RE_YT_ID) || [])[1] || "";
+    if (prov === "vimeo") return (url.match(RE_VIMEO_ID) || [])[1] || "";
+    return url;
+}
+/**
+ * Parses a "W/H" aspect string into a number.
+ * @param {string | null} str
+ * @param {number} fallback
+ * @returns {number}
+ */ function parseAspect(str, fallback) {
+    if (!str || !str.includes("/")) return fallback;
+    const parts = str.split("/");
+    const w = parseFloat(parts[0]);
+    const h = parseFloat(parts[1]);
+    return w > 0 && h > 0 ? w / h : fallback;
+}
+/**
+ * @param {string} src
+ * @returns {string}
+ */ function getMimeType(src) {
+    const ext = src.split(".").pop().split("?")[0].toLowerCase();
+    if (ext === "webm") return "video/webm";
+    if (ext === "ogg") return "video/ogg";
+    return "video/mp4";
+}
+/**
+ * @param {HTMLElement} slide
+ * @returns {boolean}
+ */ function isSwiperSlideActive(slide) {
+    for (const cls of SWIPER_ACTIVE_CLASSES){
+        if (slide.classList.contains(cls)) return true;
+    }
+    return false;
+}
+// ── Init a single component ──────────────────────────────────
+/**
+ * @param {HTMLElement} component
+ */ function initComponent(component) {
+    if (component.dataset.scriptInitialized) return;
+    component.dataset.scriptInitialized = "true";
+    const playerWrapper = component.querySelector(".video_player");
+    if (!playerWrapper) {
+        console.warn("Visual Video: .video_player element missing");
+        return;
+    }
+    const posterEl = component.querySelector(".video_poster");
+    const scope = component.closest("[data-video='component']");
+    const swiperSlide = component.closest(".swiper-slide");
+    // ── Props ──────────────────────────────────────────────
+    const src = component.getAttribute("data-src") || "";
+    if (!src) return;
+    const captions = component.getAttribute("data-captions") || "";
+    const autoplay = component.hasAttribute("data-autoplay");
+    const muted = component.hasAttribute("data-muted") || autoplay;
+    const loop = component.hasAttribute("data-loop");
+    const controlsValue = component.getAttribute("data-controls") || "full";
+    const controlsList = CONTROLS_MAP[controlsValue] || CONTROLS_MAP.full;
+    const provider = detectProvider(src);
+    const embedId = extractEmbedId(src, provider);
+    let videoAspect = parseAspect(component.getAttribute("data-source-aspect"), DEFAULT_ASPECT);
+    // ── State broadcaster ──────────────────────────────────
+    /** @type {VideoState | null} */ let currentState = null;
+    /** @param {VideoState} state */ const setVideoState = (state)=>{
+        if (state === currentState) return; // skip redundant DOM writes
+        currentState = state;
+        component.setAttribute("data-video-state", state);
+        if (scope) scope.setAttribute("data-video-state", state);
+    };
+    setVideoState(autoplay ? "playing" : "idle");
+    // ── Deferred init: choose strategy based on context ────
+    // Strategy A: Inside a Swiper slide → init only when slide
+    //   becomes active/visible.
+    // Strategy B: Standalone → IntersectionObserver with 200px
+    //   margin. Init before the user reaches the video.
+    let initialized = false;
+    const initOnce = ()=>{
+        if (initialized) return;
+        initialized = true;
+        initPlayer();
+    };
+    if (swiperSlide) {
+        if (isSwiperSlideActive(swiperSlide)) initOnce();
+        else {
+            const slideObserver = new MutationObserver(()=>{
+                if (isSwiperSlideActive(swiperSlide)) {
+                    initOnce();
+                    slideObserver.disconnect();
+                }
+            });
+            slideObserver.observe(swiperSlide, {
+                attributes: true,
+                attributeFilter: [
+                    "class"
+                ]
+            });
+        }
+    } else {
+        const ioObserver = new IntersectionObserver((entries)=>{
+            for (const entry of entries)if (entry.isIntersecting) {
+                initOnce();
+                ioObserver.disconnect();
+                break;
+            }
+        }, {
+            rootMargin: LAZY_ROOT_MARGIN
+        });
+        ioObserver.observe(component);
+    }
+    // ── Initialize Plyr ────────────────────────────────────
+    function initPlayer() {
+        /** @type {HTMLElement} */ let targetEl;
+        if (provider === "youtube" || provider === "vimeo") {
+            targetEl = document.createElement("div");
+            targetEl.dataset.plyrProvider = provider;
+            targetEl.dataset.plyrEmbedId = embedId;
+        } else {
+            targetEl = document.createElement("video");
+            targetEl.setAttribute("playsinline", "");
+            if (controlsList.length) targetEl.setAttribute("controls", "");
+            const sourceEl = document.createElement("source");
+            sourceEl.src = src;
+            sourceEl.type = getMimeType(src);
+            targetEl.appendChild(sourceEl);
+            if (captions) {
+                const track = document.createElement("track");
+                track.kind = "captions";
+                track.src = captions;
+                track.srclang = "en";
+                track.label = "English";
+                track.default = true;
+                targetEl.appendChild(track);
+            }
+        }
+        playerWrapper.insertBefore(targetEl, playerWrapper.firstChild);
+        const player = new Plyr(targetEl, {
+            controls: controlsList,
+            autoplay,
+            muted,
+            loop: {
+                active: loop
+            },
+            playsinline: true,
+            // ratio omitted — wrap dictates aspect, JS handles cover
+            youtube: {
+                noCookie: true,
+                rel: 0,
+                showinfo: 0,
+                iv_load_policy: 3,
+                modestbranding: 1,
+                controls: 0,
+                disablekb: 1,
+                playsinline: 1,
+                fs: 0,
+                cc_load_policy: 0,
+                hl: "en",
+                enablejsapi: 1
+            },
+            vimeo: {
+                byline: false,
+                portrait: false,
+                title: false,
+                transparent: false,
+                dnt: true
+            }
+        });
+        // ── Cover sizing ─────────────────────────────────────
+        /** @type {HTMLElement | null} */ let mediaEl = null;
+        let lastW = 0;
+        let lastH = 0;
+        let rafId = 0;
+        const findMediaEl = ()=>{
+            mediaEl = playerWrapper.querySelector("iframe, video");
+            return mediaEl;
+        };
+        const computeAndApply = ()=>{
+            rafId = 0;
+            if (!mediaEl && !findMediaEl()) return;
+            const rect = component.getBoundingClientRect();
+            const wW = rect.width;
+            const wH = rect.height;
+            if (!wW || !wH) return;
+            // Skip if dimensions unchanged
+            if (wW === lastW && wH === lastH) return;
+            lastW = wW;
+            lastH = wH;
+            const wrapAspect = wW / wH;
+            let tW;
+            let tH;
+            if (wrapAspect > videoAspect) {
+                tW = wW;
+                tH = wW / videoAspect;
+            } else {
+                tH = wH;
+                tW = wH * videoAspect;
+            }
+            // Single style write (one reflow)
+            mediaEl.style.cssText += `position:absolute;top:50%;left:50%;` + `width:${tW}px;height:${tH}px;` + `max-width:none;transform:translate(-50%,-50%);`;
+        };
+        // rAF-batched scheduler
+        const scheduleApply = ()=>{
+            if (rafId) return;
+            rafId = requestAnimationFrame(computeAndApply);
+        };
+        const forceApply = ()=>{
+            lastW = 0;
+            lastH = 0;
+            scheduleApply();
+        };
+        forceApply(); // also try synchronously, before Plyr signals ready
+        player.on("ready", async ()=>{
+            findMediaEl();
+            forceApply();
+            if (!autoplay) setVideoState("idle");
+            // Vimeo: ask the embed for real source dimensions so cover-sizing
+            // uses the actual aspect, not the declared one.
+            if (provider === "vimeo") try {
+                const embed = /** @type {any} */ player.embed;
+                if (embed && embed.getVideoWidth && embed.getVideoHeight) {
+                    const [w, h] = await Promise.all([
+                        embed.getVideoWidth(),
+                        embed.getVideoHeight()
+                    ]);
+                    if (w > 0 && h > 0) {
+                        videoAspect = w / h;
+                        forceApply();
+                    }
+                }
+            } catch (_) {
+            /* silent */ }
+        });
+        // HTML5: auto-detect true source aspect via loadedmetadata
+        if (provider === "html5") {
+            const v = /** @type {HTMLVideoElement | null} */ playerWrapper.querySelector("video");
+            if (v) v.addEventListener("loadedmetadata", ()=>{
+                if (v.videoWidth && v.videoHeight) {
+                    videoAspect = v.videoWidth / v.videoHeight;
+                    forceApply();
+                }
+            }, {
+                once: true
+            });
+        }
+        // ResizeObserver — re-fits on any wrap size change
+        const ro = new ResizeObserver(scheduleApply);
+        ro.observe(component);
+        player.on("playing", ()=>setVideoState("playing"));
+        player.on("pause", ()=>setVideoState("paused"));
+        player.on("ended", ()=>{
+            setVideoState("ended");
+            if (posterEl) posterEl.classList.remove("is-active");
+        });
+        // ── Poster ───────────────────────────────────────────
+        if (posterEl) {
+            posterEl.addEventListener("click", ()=>player.play(), {
+                passive: true
+            });
+            player.on("playing", ()=>posterEl.classList.add("is-active"));
+            if (autoplay) posterEl.classList.add("is-active");
+        }
+        // ── Cleanup ──────────────────────────────────────────
+        player.on("destroy", ()=>{
+            ro.disconnect();
+            if (rafId) cancelAnimationFrame(rafId);
+        });
+        // Expose Plyr instance for external access
+        /** @type {any} */ component._plyr = player;
+    }
+}
+function initVisualVideos() {
+    document.querySelectorAll(".video_wrap").forEach((el)=>{
+        initComponent(/** @type {HTMLElement} */ el);
+    });
+}
+function initVisualVideo(element) {
+    if (element && element.classList.contains("video_wrap")) initComponent(element);
+}
+// ── Auto-boot ────────────────────────────────────────────────
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initVisualVideos, {
+    once: true
+});
+else initVisualVideos();
+
+},{"@parcel/transformer-js/src/esmodule-helpers.js":"4PAvJ"}]},["6nWMv","8lqZg"], "8lqZg", "parcelRequire08d4", {})
+
 //# sourceMappingURL=index.js.map
