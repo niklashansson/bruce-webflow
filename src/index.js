@@ -9,6 +9,5 @@ import "./city.js";
 import "./city-visibility.js";
 import "./location.js";
 import "./studios-search-redirect.js";
-import "./slider.js";
 import "./tab.js";
 import "./visual-video.js";

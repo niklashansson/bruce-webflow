@@ -6,13 +6,13 @@
  * focusable items inside the content panel.
  *
  * Per-wrap data attributes (all optional, all on the wrap):
- *   - data-open-on-hover-in="True"     mouseenter on the wrap opens it
- *   - data-close-on-hover-out="True"   mouseleave on the wrap closes it
+ *   - data-open-on-hover-in="true"     mouseenter on the wrap opens it
+ *   - data-close-on-hover-out="true"   mouseleave on the wrap closes it
  *
  * Webflow markup (style with whatever classes you want):
  *   <div data-dropdown-element="wrap"
- *        data-open-on-hover-in="True"
- *        data-close-on-hover-out="True">
+ *        data-open-on-hover-in="true"
+ *        data-close-on-hover-out="true">
  *     <button data-dropdown-element="toggle">…</button>
  *     <div data-dropdown-element="content">
  *       <a href="…">Item 1</a>
@@ -209,7 +209,8 @@ export function initDropdown() {
       if (isOpen()) return;
       // Only one dropdown open at a time — sidesteps z-index conflicts when
       // two open menus would otherwise stack by document order.
-      if (activeDropdown && activeDropdown.wrap !== wrap) activeDropdown.close();
+      if (activeDropdown && activeDropdown.wrap !== wrap)
+        activeDropdown.close();
       // Lift above any peer that's still animating closed so it can't
       // overlap visually during the parallel close/open.
       zCounter += 1;
