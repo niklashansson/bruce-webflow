@@ -507,7 +507,11 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     const entry = { feature };
     entry.marker = attachMarker(el, feature.coordinates, () => {
       openPopup(entry.feature);
-      map.flyTo({ center: entry.feature.coordinates, speed: 0.6 });
+      map.flyTo({
+        center: entry.feature.coordinates,
+        speed: 0.6,
+        padding: bottomPad(),
+      });
     });
     pointMarkers.set(pointKey(feature), entry);
   }
@@ -530,6 +534,7 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
         center: entry.coords,
         zoom: expansionZoom + CLUSTER_EXPANSION_PADDING,
         duration: FIT_BOUNDS_CONFIG.duration,
+        padding: bottomPad(),
       });
     });
     clusterMarkers.set(entry.clusterId, entry);
@@ -557,6 +562,13 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     return Math.min(Math.max(0, t.bottom - c.top), t.height);
   }
 
+  // Camera padding that keeps a fly-to's focal point in the strip ABOVE the
+  // sheet — the map's "active area" is what's visible, never the part the sheet
+  // covers. 0 on desktop / before the sheet upgrades, so it's a no-op there.
+  function bottomPad() {
+    return { top: 0, right: 0, left: 0, bottom: sheetCoverage() };
+  }
+
   function fitToFeatures(features) {
     if (!map) return;
     const cov = sheetCoverage();
@@ -574,7 +586,7 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
           center: c,
           zoom: CITY_ZOOM,
           duration: FIT_BOUNDS_CONFIG.duration,
-          padding: { top: 0, right: 0, left: 0, bottom: cov },
+          padding: bottomPad(),
         });
       }
       return;
@@ -584,7 +596,7 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
         center: pts[0],
         zoom: SINGLE_FEATURE_ZOOM,
         duration: FIT_BOUNDS_CONFIG.duration,
-        padding: { top: 0, right: 0, left: 0, bottom: cov },
+        padding: bottomPad(),
       });
       return;
     }
