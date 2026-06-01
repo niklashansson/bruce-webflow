@@ -2,7 +2,7 @@
  * Tab Component
  *
  * Accessible tab pattern with optional autoplay, accordion mode, and
- * Finsweet CMS integration. No external dependencies.
+ * static CMS list flattening. No external dependencies.
  *
  * Autoplay drives a `--progress` custom property (0→1) on `.tab_wrap` via
  * requestAnimationFrame, so any CSS keyed off that variable updates each

@@ -41,7 +41,7 @@
  * ── Switcher UI ──────────────────────────────────────────────
  * Any element with data-set-city="<slug>" becomes a switcher:
  *   <button data-set-city="cph">Copenhagen</button>
- * Delegated handlers cover static + Finsweet-injected switchers. The active
+ * Delegated handlers cover static + dynamically-injected switchers. The active
  * switcher is flagged with data-city-active="true" for styling.
  *
  * ── Programmatic API ─────────────────────────────────────────
@@ -218,7 +218,7 @@ function applyCity(slug) {
 
   syncActiveSwitchers();
 
-  // Vars always re-push (Finsweet may reload with fresh CMS data for the same
+  // Vars always re-push (a CMS re-render may bring fresh data for the same
   // slug); subscribers only fire on an actual slug change.
   if (slugChanged) {
     listeners.forEach((fn) => {
@@ -247,8 +247,8 @@ function persist(slug) {
 }
 
 // ── Boot / re-boot ───────────────────────────────────────────
-// Idempotent: safe to call on initial load, after Finsweet renders, and from
-// the MutationObserver. Preserves the current slug across re-loads of the
+// Idempotent: safe to call on initial load and after CMS content renders.
+// Preserves the current slug across re-loads of the
 // list so editor-side CMS updates don't reset the user's choice.
 
 function refresh() {
@@ -299,7 +299,7 @@ const api = {
 /** @type {any} */ (window).bruce.city = api;
 
 // ── Delegated switcher handlers ──────────────────────────────
-// Single document-level listener covers static buttons, Finsweet-injected
+// Single document-level listener covers static buttons, dynamically-injected
 // switchers, and anything added later. preventDefault on the click guards
 // against anchor switchers navigating to "#".
 
@@ -327,54 +327,9 @@ document.addEventListener("keydown", (e) => {
   handleSwitcher(e);
 });
 
-// ── Finsweet hook: re-load when CMS lists resolve ────────────
-/** @type {any} */ (window).FinsweetAttributes ||= [];
-/** @type {any} */ (window).FinsweetAttributes.push([
-  "list",
-  /** @param {Array<{loadingPromise?: Promise<unknown>}>} lists */
-  (lists) => {
-    Promise.all(lists.map((l) => l.loadingPromise || Promise.resolve())).then(
-      refresh,
-    );
-  },
-]);
-
-// ── MutationObserver: catch non-Finsweet late inserts ────────
-// Only schedules a refresh if a relevant subtree was added. Debounced via rAF
-// so a burst of CMS mutations triggers one re-load.
-//
-// Pre-filter is intentionally cheap: `matches` only, no subtree walk. Webflow
-// pages mutate constantly (sliders, tabs, animations); a `querySelector` on
-// every added node would dominate the main thread. Finsweet's own deep inserts
-// are handled by the FinsweetAttributes hook below — this observer only needs
-// to catch direct inserts of the list wrapper or a city item.
-
-let pendingRafId = 0;
-const scheduleRefresh = () => {
-  if (pendingRafId) return;
-  pendingRafId = requestAnimationFrame(() => {
-    pendingRafId = 0;
-    refresh();
-  });
-};
-
-const observer = new MutationObserver((mutations) => {
-  for (const m of mutations) {
-    for (const node of m.addedNodes) {
-      if (node.nodeType !== 1) continue;
-      const el = /** @type {Element} */ (node);
-      if (el.matches?.(LIST_SELECTOR) || el.matches?.("[data-city-slug]")) {
-        scheduleRefresh();
-        return;
-      }
-    }
-  }
-});
-
 // ── Auto-boot ────────────────────────────────────────────────
 const boot = () => {
   refresh();
-  observer.observe(document.body, { childList: true, subtree: true });
   SAFETY_PASS_DELAYS.forEach((ms) =>
     setTimeout(() => {
       if (!current) refresh();

@@ -432,7 +432,7 @@ export function initVisualVideos() {
 
 /**
  * Initialize a specific .video_wrap element. Useful for dynamically inserted
- * components (e.g. after fetching CMS items via Finsweet List Load).
+ * components (e.g. after dynamically fetching CMS items).
  *
  * @param {HTMLElement} element
  */

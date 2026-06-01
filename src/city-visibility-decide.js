@@ -1,8 +1,7 @@
 /**
  * Pure decision helper for the city-visibility module (city-visibility.js).
  * Framework-free (no DOM, no globals) so the "is this element visible in the
- * active city" rules live in one unit-testable place — mirroring the
- * studios-city-select.js / studios-city-filter.js split.
+ * active city" rules live in one unit-testable place.
  */
 
 /**

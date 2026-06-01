@@ -37,7 +37,7 @@
  * only AFTER its first sweep against a non-null active city, so if
  * city.js fails to boot the pre-hide stays in place (fail-closed).
  *
- * Late inserts (Finsweet, dynamic CMS) are caught by a narrow
+ * Late inserts (dynamic CMS) are caught by a narrow
  * MutationObserver and safety-pass timers at [500, 1500, 3500] ms,
  * matching the convention in src/city.js and src/variables.js.
  */

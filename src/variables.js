@@ -33,7 +33,7 @@
  *   In attributes (href, src, alt, title, aria-label, placeholder, value):
  *     <a href="mailto:{{email}}">Contact</a>
  *
- * Handles late-arriving content (Finsweet List Nest, async injection) via a
+ * Handles late-arriving content (async / CMS injection) via a
  * debounced re-scan + delayed safety passes.
  *
  * Loaded globally — no external dependencies.
@@ -148,7 +148,7 @@ function replacer(node) {
  * Idempotent: nothing without {{...}} is touched, so multiple passes are safe.
  *
  * Always scans from document.body rather than from MutationObserver-supplied
- * subtrees — Finsweet often inserts a parent container, then populates its
+ * subtrees — CMS rendering often inserts a parent container, then populates its
  * children in subsequent mutations. A full-body scan sidesteps that race.
  */
 function process() {
@@ -213,14 +213,14 @@ function process() {
 
 // ── Debounced re-process ─────────────────────────────────────
 // Any relevant DOM change schedules a single rAF-deferred re-scan, so a
-// burst of Finsweet mutations triggers one pass instead of N. `dirty` lets
+// burst of CMS mutations triggers one pass instead of N. `dirty` lets
 // the safety-pass timers skip their work on pages that have settled.
 
 let pendingRafId = 0;
 let dirty = false;
 
 const runProcess = () => {
-  loadGlobals(); // in case the globals list itself was Finsweet-managed
+  loadGlobals(); // in case the globals list itself was CMS-rendered
   process();
   dirty = false;
 };

@@ -6,6 +6,10 @@
  * stay consistent across all components.
  */
 
+// Marks a list that Finsweet's `fs-list` owns. The CMS-flatten helpers must
+// NOT mutate such lists: Finsweet enumerates the collection from this live
+// DOM, so deleting its nodes corrupts pagination/filtering (e.g. an
+// `fs-list-nest` accordion, or any list sharing a page with a results list).
 export const FINSWEET_SELECTORS =
   "[fs-list-element], [fs-list-nest], [fs-list-instance]";
 
@@ -34,9 +38,9 @@ export function attrNum(el, attr, defaultValue) {
 }
 
 /**
- * Unwrap `.u-display-contents` wrappers inside a slot, but stop if
- * the wrapper is a Finsweet-managed CMS list — Finsweet keeps
- * references to those elements and breaks if we mutate them.
+ * Unwrap `.u-display-contents` wrappers inside a slot, but stop at a Webflow
+ * CMS list wrapper (`.w-dyn-list`) or any Finsweet-managed list — Finsweet
+ * keeps references to those elements and breaks if we mutate them.
  *
  * @param {HTMLElement | null} slot
  */
@@ -58,12 +62,13 @@ export function flattenDisplayContents(slot) {
 /**
  * Flatten a static Webflow CMS list into its parent slot, hoisting
  * each item's first visible child up. Leaves Finsweet-managed lists
- * untouched.
+ * untouched — deleting their nodes corrupts Finsweet's enumeration.
  *
  * @param {HTMLElement | null} slot
  */
 export function removeCMSList(slot) {
   if (!slot) return;
+
   const dynList = Array.from(slot.children).find((child) =>
     child.classList.contains("w-dyn-list"),
   );

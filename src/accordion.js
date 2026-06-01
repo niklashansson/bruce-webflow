@@ -75,10 +75,8 @@ export function initAccordion() {
       (el) => el.closest(A.list) === list,
     );
 
-    // Don't mark the list initialized if it has no items yet. An `fs-list-nest`
-    // target is in the DOM at DOMContentLoaded but empty until Finsweet
-    // hydrates it — marking it now would make the re-init hook below skip the
-    // list once items finally arrive, leaving nested accordions unwired.
+    // Nothing to wire yet — leave the list uninitialized so a later init pass
+    // (e.g. a modal mount re-running initAccordion) can wire it once it has items.
     if (items.length === 0) return;
     list.dataset.scriptInitialized = "true";
 
@@ -211,68 +209,6 @@ export function initAccordion() {
     });
   });
 }
-
-// ── Finsweet integration ─────────────────────────────────────
-// Re-init accordions once Finsweet has populated CMS lists. Without this,
-// nested accordions hydrated via fs-list-nest never get wired — the outer
-// list is in the DOM at DOMContentLoaded, the inner ones aren't.
-
-/** @type {any} */ (window).FinsweetAttributes ||= [];
-/** @type {any} */ (window).FinsweetAttributes.push([
-  "list",
-  /** @param {Array<{loadingPromise?: Promise<unknown>}>} lists */
-  (lists) => {
-    Promise.all(lists.map((l) => l.loadingPromise || Promise.resolve())).then(
-      initAccordion,
-    );
-  },
-]);
-
-// ── MutationObserver: catch dynamic content from other sources ───
-// Handles cases where accordion lists appear via non-Finsweet means
-// (manual JS, Webflow CMS pagination, modal mounts, etc.). Debounced via
-// rAF to coalesce bulk DOM inserts. The init's `data-script-initialized`
-// guard already skips lists that are already wired.
-
-let mutationRafId = 0;
-let pendingMutations = false;
-
-const processMutations = () => {
-  mutationRafId = 0;
-  if (!pendingMutations) return;
-  pendingMutations = false;
-  initAccordion();
-};
-
-const scheduleMutationProcess = () => {
-  pendingMutations = true;
-  if (mutationRafId) return;
-  mutationRafId = requestAnimationFrame(processMutations);
-};
-
-const TRIGGER_SELECTOR = `${A.list}, ${A.item}`;
-
-const mutationObserver = new MutationObserver((mutations) => {
-  for (const m of mutations) {
-    for (const node of m.addedNodes) {
-      if (node.nodeType !== 1) continue;
-      const el = /** @type {Element} */ (node);
-
-      // Match items OR lists, on self OR descendants. Finsweet's `fs-list-nest`
-      // injects ITEMS into an already-existing list, so listening for new
-      // lists alone misses that case — and a `closest()` check would
-      // short-circuit on the outer already-initialized list.
-      const trigger =
-        el.matches?.(TRIGGER_SELECTOR) || el.querySelector?.(TRIGGER_SELECTOR);
-      if (trigger) {
-        scheduleMutationProcess();
-        return;
-      }
-    }
-  }
-});
-
-mutationObserver.observe(document.body, { childList: true, subtree: true });
 
 // ── Auto-boot ────────────────────────────────────────────────
 if (document.readyState === "loading") {

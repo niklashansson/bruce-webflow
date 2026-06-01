@@ -1,7 +1,7 @@
 // Studio template page — renders a single Mapbox GL map centered on the
 // studio's location. This is the CMS *template* page for one studio (singular
-// `data-studio-*` namespace), distinct from studios.js which powers the
-// filterable list/map of all studios.
+// `data-studio-*` namespace), distinct from explorer.js which powers the
+// filterable per-city list/map of studios.
 //
 // Mapbox GL is loaded LAZILY by the shared ./mapbox.js loader the first time
 // the map scrolls into view — it must NOT be a blocking <script> in the Webflow

@@ -1,5 +1,5 @@
-// Shared Mapbox GL loader — used by both studios.js (list/map page) and
-// studio.js (single studio template page). Mapbox GL is loaded LAZILY from the
+// Shared Mapbox GL loader — used by both explorer.js (per-city list/map page)
+// and studio.js (single studio template page). Mapbox GL is loaded LAZILY from the
 // CDN on first call; it must NOT be added as a blocking <script> in the Webflow
 // <head>, or the ~460 KB + eval lands back on the critical path.
 //
