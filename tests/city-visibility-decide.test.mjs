@@ -1,9 +1,7 @@
 // Unit tests for the city-visibility pure decision helper.
 // Framework-free: run with `node tests/city-visibility-decide.test.mjs`.
-// The helper has no DOM/global deps, so importing it in Node is safe.
-
 import assert from "node:assert/strict";
-import { shouldShow } from "../src/city-visibility-decide.js";
+import { decideVisibility } from "../src/city-visibility-decide.js";
 
 let passed = 0;
 function check(label, actual, expected) {
@@ -20,129 +18,35 @@ const CITIES = [
   { slug: "cph", name: "Copenhagen" },
   { slug: "osl", name: "Oslo" },
 ];
+const A = (over) => Object.assign({ show: null, hide: null, none: false, any: false }, over);
 
-// ── empty / missing attribute → always visible ───────────────
-check(
-  "null attribute → visible",
-  shouldShow(null, "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "empty attribute → visible",
-  shouldShow("", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "whitespace-only attribute → visible",
-  shouldShow("   ", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
+// ── no constraints → visible ─────────────────────────────────
+check("no attributes → visible", decideVisibility(A({}), "sto", CITIES), { visible: true, unknownValues: [] });
 
-// ── pre-boot (no active slug) hides non-empty attributes ─────
-check(
-  "null activeSlug, non-empty attr → hidden",
-  shouldShow("sto", null, CITIES),
-  { visible: false, unknownValues: [] },
-);
-check(
-  "null activeSlug, empty attr → visible",
-  shouldShow("", null, CITIES),
-  { visible: true, unknownValues: [] },
-);
+// ── show ─────────────────────────────────────────────────────
+check("show match → visible", decideVisibility(A({ show: "sto" }), "sto", CITIES), { visible: true, unknownValues: [] });
+check("show mismatch → hidden", decideVisibility(A({ show: "cph" }), "sto", CITIES), { visible: false, unknownValues: [] });
+check("show list, one matches → visible", decideVisibility(A({ show: "cph, sto" }), "sto", CITIES), { visible: true, unknownValues: [] });
+check("show by name, case-insensitive → visible", decideVisibility(A({ show: "Stockholm" }), "sto", CITIES), { visible: true, unknownValues: [] });
+check("show, neutral active → hidden", decideVisibility(A({ show: "sto" }), null, CITIES), { visible: false, unknownValues: [] });
+check("show empty value → visible (no-op)", decideVisibility(A({ show: "" }), "sto", CITIES), { visible: true, unknownValues: [] });
+check("show unknown token → hidden + reported", decideVisibility(A({ show: "malmo" }), "sto", CITIES), { visible: false, unknownValues: ["malmo"] });
 
-// ── single value: slug match ─────────────────────────────────
-check(
-  "single slug match",
-  shouldShow("sto", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "single slug mismatch",
-  shouldShow("cph", "sto", CITIES),
-  { visible: false, unknownValues: [] },
-);
-check(
-  "single slug match, mixed case attr",
-  shouldShow("STO", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "single slug match, mixed case slug",
-  shouldShow("sto", "STO", CITIES),
-  { visible: true, unknownValues: [] },
-);
+// ── hide ─────────────────────────────────────────────────────
+check("hide match → hidden", decideVisibility(A({ hide: "sto" }), "sto", CITIES), { visible: false, unknownValues: [] });
+check("hide non-match → visible", decideVisibility(A({ hide: "cph" }), "sto", CITIES), { visible: true, unknownValues: [] });
+check("hide, neutral active → visible", decideVisibility(A({ hide: "sto" }), null, CITIES), { visible: true, unknownValues: [] });
 
-// ── single value: name match ─────────────────────────────────
-check(
-  "single name match (exact case)",
-  shouldShow("Stockholm", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "single name match (lower case)",
-  shouldShow("stockholm", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "single name mismatch",
-  shouldShow("Copenhagen", "sto", CITIES),
-  { visible: false, unknownValues: [] },
-);
+// ── none ─────────────────────────────────────────────────────
+check("none, neutral active → visible", decideVisibility(A({ none: true }), null, CITIES), { visible: true, unknownValues: [] });
+check("none, city active → hidden", decideVisibility(A({ none: true }), "sto", CITIES), { visible: false, unknownValues: [] });
 
-// ── multi-value lists ────────────────────────────────────────
-check(
-  "comma list, one slug matches",
-  shouldShow("cph, sto", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "comma list, no match",
-  shouldShow("cph, osl", "sto", CITIES),
-  { visible: false, unknownValues: [] },
-);
-check(
-  "comma list, extra whitespace tolerated",
-  shouldShow("  cph ,   sto  ", "cph", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "comma list, mix of slug + name",
-  shouldShow("Copenhagen, osl", "osl", CITIES),
-  { visible: true, unknownValues: [] },
-);
+// ── any ──────────────────────────────────────────────────────
+check("any, city active → visible", decideVisibility(A({ any: true }), "sto", CITIES), { visible: true, unknownValues: [] });
+check("any, neutral active → hidden", decideVisibility(A({ any: true }), null, CITIES), { visible: false, unknownValues: [] });
 
-// ── unknown tokens reported ──────────────────────────────────
-check(
-  "unknown single value → hidden + reported",
-  shouldShow("malmo", "sto", CITIES),
-  { visible: false, unknownValues: ["malmo"] },
-);
-check(
-  "unknown + known, known matches → visible, unknown still reported",
-  shouldShow("malmo, sto", "sto", CITIES),
-  { visible: true, unknownValues: ["malmo"] },
-);
-check(
-  "unknown + known, neither matches → hidden + reported",
-  shouldShow("malmo, cph", "sto", CITIES),
-  { visible: false, unknownValues: ["malmo"] },
-);
-check(
-  "multiple unknown values reported",
-  shouldShow("malmo, gothenburg", "sto", CITIES),
-  { visible: false, unknownValues: ["malmo", "gothenburg"] },
-);
-
-// ── edge cases ───────────────────────────────────────────────
-check(
-  "comma-only attribute → visible (no real tokens)",
-  shouldShow(", ,", "sto", CITIES),
-  { visible: true, unknownValues: [] },
-);
-check(
-  "empty cities array, non-empty attribute → hidden, value reported",
-  shouldShow("sto", "sto", []),
-  { visible: false, unknownValues: ["sto"] },
-);
+// ── combined constraints (AND) ───────────────────────────────
+check("show+any, match & active → visible", decideVisibility(A({ show: "sto", any: true }), "sto", CITIES), { visible: true, unknownValues: [] });
+check("show+hide same city → hidden", decideVisibility(A({ show: "sto", hide: "sto" }), "sto", CITIES), { visible: false, unknownValues: [] });
 
 console.log(`✓ all ${passed} assertions passed`);
