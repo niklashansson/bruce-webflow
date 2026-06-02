@@ -202,9 +202,12 @@ html:not(.wf-design-mode) body:not(.is-city-ready)
 - **Fail-closed:** if the registry never loads / context never resolves,
   `is-city-ready` is never set and only generic (no-attribute) content shows —
   which is exactly the safe neutral baseline.
-- The `html:not(.wf-design-mode)` prefix + a `data-preview-city` hook on
-  `<body>` lets editors preview a single city in the Webflow Designer without
-  the live resolution chain running.
+- The `html:not(.wf-design-mode)` prefix suppresses the pre-hide inside the
+  Webflow Designer, so editors still see city-conditional elements while
+  authoring. **Deferred (not in this rewrite):** an active `data-preview-city`
+  hook that toggles elements to a *chosen* city's visibility inside the
+  Designer. Today the Designer shows all city-conditional elements unfiltered;
+  a per-city Designer preview can be added later if editors need it.
 
 ### "Resolved" vs "pre-boot"
 
