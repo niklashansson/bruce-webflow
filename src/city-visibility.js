@@ -1,101 +1,90 @@
 /**
  * City Visibility
  *
- * Toggles visibility of any element marked `data-city-show="<slug-or-name>[,...]"`
- * based on the active city resolved by src/city.js.
+ * Toggles elements marked with one of four attributes based on the active
+ * city resolved by src/city-context.js:
+ *   data-city-show="<slug-or-name>[,...]"   visible only for those cities
+ *   data-city-hide="<slug-or-name>[,...]"   hidden for those cities
+ *   data-city-none                          visible only when neutral
+ *   data-city-any                           visible only when a city is active
  *
  * ── Required CSS (Webflow site-wide custom code, set up once) ─────
  *   .is-city-hidden { display: none !important; }
  *   html:not(.wf-design-mode) body:not(.is-city-ready)
- *     [data-city-show]:not([data-city-show=""]) {
+ *     :is([data-city-show],[data-city-hide],[data-city-none],[data-city-any]) {
  *     display: none;
  *   }
  *
- * The html:not(.wf-design-mode) prefix lets editors preview one city
- * at a time in the Webflow Designer via the data-preview-city
- * attribute — see specs/2026-05-27-preview-city-design.md.
+ * The !important defeats Webflow class-driven display:flex/grid/block (same
+ * external-CSS precedence lesson as the bottom-sheet component). Pre-hide uses
+ * display:none to avoid empty flex/grid slots during the boot window.
  *
- * The !important defeats Webflow class-driven display:flex/grid/block
- * (same external-CSS precedence lesson as the bottom-sheet component).
- * Pre-hide uses display:none rather than visibility:hidden to avoid
- * empty slots in flex/grid sections during the boot window.
+ * ── Ready flag ────────────────────────────────────────────────────
+ * is-city-ready is set after the first sweep that runs from a *resolved*
+ * context. city-context fires onChange once on initial resolution — even for a
+ * neutral (null) result — and replays it to late subscribers, so a neutral
+ * page still reveals its data-city-none content. If the context never resolves
+ * (registry missing) the flag stays unset and only generic content shows
+ * (fail-closed neutral baseline).
  *
- * ── Attribute semantics ───────────────────────────────────────────
- *   data-city-show="cph"          visible only when active city is cph
- *   data-city-show="cph, sto"     visible when active is cph or sto
- *   data-city-show="Copenhagen"   name match works too, case-insensitive
- *   data-city-show=""             always visible (empty value is a no-op)
- *   no attribute                  always visible (normal behavior)
- *
- * Matching is case-insensitive against city.slug AND city.name (same
- * permissive lookup as citiesFromUrl() in src/city.js). Values matching
- * no city leave the element hidden and warn once per (attr, value) pair.
- *
- * ── FOUC ──────────────────────────────────────────────────────────
- * Pre-hide rule keeps non-empty data-city-show elements display:none
- * until <body> gains is-city-ready. This module sets that body class
- * only AFTER its first sweep against a non-null active city, so if
- * city.js fails to boot the pre-hide stays in place (fail-closed).
- *
- * Late inserts (dynamic CMS) are caught by a narrow
- * MutationObserver and safety-pass timers at [500, 1500, 3500] ms,
- * matching the convention in src/city.js and src/variables.js.
+ * Late inserts (dynamic CMS) are caught by a narrow MutationObserver and
+ * safety-pass timers at [500, 1500, 3500] ms.
  */
 
-import { shouldShow } from "./city-visibility-decide.js";
+import { decideVisibility } from "./city-visibility-decide.js";
 
-const ATTR = "data-city-show";
+const SELECTOR =
+  "[data-city-show],[data-city-hide],[data-city-none],[data-city-any]";
 const HIDE_CLASS = "is-city-hidden";
 const READY_CLASS = "is-city-ready";
 const SAFETY_PASS_DELAYS = [500, 1500, 3500];
 
-/** Dedupe warnings: one warning per (attr value, unknown token) pair. */
+/** Dedupe warnings: one per (attr value, unknown token). */
 const warnedValues = new Set();
 
-/**
- * @param {HTMLElement} el
- * @param {string | null} activeSlug
- * @param {Array<{slug: string, name: string}>} cities
- */
+function readAttrs(el) {
+  return {
+    show: el.getAttribute("data-city-show"),
+    hide: el.getAttribute("data-city-hide"),
+    none: el.hasAttribute("data-city-none"),
+    any: el.hasAttribute("data-city-any"),
+  };
+}
+
 function applyVisibility(el, activeSlug, cities) {
-  const attr = el.getAttribute(ATTR);
-  const { visible, unknownValues } = shouldShow(attr, activeSlug, cities);
+  const attrs = readAttrs(el);
+  const { visible, unknownValues } = decideVisibility(attrs, activeSlug, cities);
   el.classList.toggle(HIDE_CLASS, !visible);
 
   for (const v of unknownValues) {
-    const key = `${attr}|${v}`;
+    const key = `${attrs.show ?? ""}|${attrs.hide ?? ""}|${v}`;
     if (warnedValues.has(key)) continue;
     warnedValues.add(key);
     console.warn(
-      `[bruce.city-visibility] data-city-show="${attr}" — value "${v}" matched no known city.`,
+      `[bruce.city-visibility] value "${v}" matched no known city.`,
       "Known cities:",
       cities.map((c) => ({ slug: c.slug, name: c.name })),
     );
   }
 }
 
-/**
- * Sweep every `[data-city-show]` element in the document. Sets the
- * `is-city-ready` body class once a sweep completes with a non-null slug,
- * which drops the global pre-hide rule.
- */
+let lastResolved = false;
+
 function sweep() {
-  const api = /** @type {any} */ (window).bruce?.city;
-  if (!api) return;
-  const activeSlug = api.get();
-  const cities = api.all();
+  const cityApi = /** @type {any} */ (window).bruce?.city;
+  if (!cityApi) return;
+  const activeSlug = cityApi.get();
+  const cities = cityApi.all();
 
-  document.querySelectorAll(`[${ATTR}]`).forEach((el) => {
-    applyVisibility(/** @type {HTMLElement} */ (el), activeSlug, cities);
-  });
+  document
+    .querySelectorAll(SELECTOR)
+    .forEach((el) => applyVisibility(el, activeSlug, cities));
 
-  if (activeSlug) {
-    document.body.classList.add(READY_CLASS);
-  }
+  // Only flag ready once the context has actually resolved. We learn that via
+  // the onChange callback (set lastResolved there); a MutationObserver-driven
+  // sweep before resolution must not reveal content.
+  if (lastResolved) document.body.classList.add(READY_CLASS);
 }
-
-// ── Debounced re-sweep ───────────────────────────────────────
-// A burst of mutations or simultaneous onChange + insert triggers one pass.
 
 let pendingRafId = 0;
 const scheduleSweep = () => {
@@ -106,17 +95,12 @@ const scheduleSweep = () => {
   });
 };
 
-// ── MutationObserver: catch late inserts ─────────────────────
-// Cheap pre-filter (matches + querySelector only, no walk) — same pattern
-// as src/city.js's observer. Webflow pages mutate constantly; expensive
-// per-node walks would dominate the main thread.
-
 const observer = new MutationObserver((mutations) => {
   for (const m of mutations) {
     for (const node of m.addedNodes) {
       if (node.nodeType !== 1) continue;
       const el = /** @type {Element} */ (node);
-      if (el.matches?.(`[${ATTR}]`) || el.querySelector?.(`[${ATTR}]`)) {
+      if (el.matches?.(SELECTOR) || el.querySelector?.(SELECTOR)) {
         scheduleSweep();
         return;
       }
@@ -124,17 +108,14 @@ const observer = new MutationObserver((mutations) => {
   }
 });
 
-// ── Boot ─────────────────────────────────────────────────────
-// Subscribes to city.onChange, runs an initial sweep, then arms the
-// observer + safety-pass timers. Called at most once per page load.
-
 const boot = () => {
-  const api = /** @type {any} */ (window).bruce?.city;
-  api?.onChange?.(() => sweep());
-
-  sweep(); // may run with null slug → all data-city-show get is-city-hidden,
-  // body.is-city-ready stays unset, pre-hide remains. onChange or a safety
-  // pass will re-run once city.js resolves.
+  const cityApi = /** @type {any} */ (window).bruce?.city;
+  // onChange replays the current state immediately if already resolved, so this
+  // both handles "resolved before us" and "resolves after us".
+  cityApi?.onChange?.(() => {
+    lastResolved = true;
+    sweep();
+  });
 
   observer.observe(document.body, { childList: true, subtree: true });
 
