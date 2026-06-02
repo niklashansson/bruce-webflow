@@ -17,7 +17,8 @@
 | File | Responsibility | Tested |
 |---|---|---|
 | `src/city-registry.js` | `cityFromAttrs(attrs)` (pure) + `readCityList()` (DOM). Parse the hidden `[data-city-list]` into city objects. | pure: yes |
-| `src/city-context.js` | `resolveActiveCity()` + `buildPlaceholders()` (pure) + DOM/localStorage shell, `window.bruce.city` API, boot. | pure: yes |
+| `src/city-resolve.js` | `resolveActiveCity()` + `buildPlaceholders()` — pure, **no imports** (so it is Node-testable; mirrors how `city-visibility-decide.js` is split from `city-visibility.js`). | yes |
+| `src/city-context.js` | DOM/localStorage shell, `window.bruce.city` API, boot. Imports the pure helpers from `city-resolve.js`. | manual |
 | `src/city-visibility-decide.js` | `decideVisibility(attrs, activeSlug, cities)` (pure). Four-attribute visibility matrix. | yes |
 | `src/city-visibility.js` | DOM sweep, `is-city-hidden`/`is-city-ready`, observer + safety passes. | manual |
 | `src/city-switcher.js` | `data-set-city` in-place switching + `data-city-active` sync. | manual |
@@ -194,18 +195,24 @@ git commit -m "feat(city): add city-registry pure parser + DOM reader"
 ## Task 2: Resolution chain (`resolveActiveCity`)
 
 **Files:**
-- Create: `src/city-context.js` (resolver export only in this task)
-- Test: `tests/city-context.test.mjs`
+- Create: `src/city-resolve.js` (pure helpers, **no imports**)
+- Test: `tests/city-resolve.test.mjs`
+
+> **Why a separate file:** `city-context.js` (Task 3) imports `variables.js`,
+> which instantiates a `MutationObserver` and reads `document.readyState` at
+> module top-level — so importing it in Node throws. The pure resolver logic
+> therefore lives in its own import-free module, exactly mirroring how
+> `city-visibility-decide.js` is split from `city-visibility.js`.
 
 - [ ] **Step 1: Write the failing test**
 
-Create `tests/city-context.test.mjs`:
+Create `tests/city-resolve.test.mjs`:
 
 ```js
-// Unit tests for the city-context pure helpers.
-// Framework-free: run with `node tests/city-context.test.mjs`.
+// Unit tests for the city-resolve pure helpers.
+// Framework-free: run with `node tests/city-resolve.test.mjs`.
 import assert from "node:assert/strict";
-import { resolveActiveCity, buildPlaceholders } from "../src/city-context.js";
+import { resolveActiveCity, buildPlaceholders } from "../src/city-resolve.js";
 
 let passed = 0;
 function check(label, actual, expected) {
@@ -291,30 +298,26 @@ console.log(`✓ all ${passed} assertions passed`);
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `node tests/city-context.test.mjs`
-Expected: FAIL — `Cannot find module '../src/city-context.js'`.
+Run: `node tests/city-resolve.test.mjs`
+Expected: FAIL — `Cannot find module '../src/city-resolve.js'`.
 
 - [ ] **Step 3: Write minimal implementation (pure helpers only)**
 
-Create `src/city-context.js` with the two pure helpers. (The DOM shell + API are added in Task 3; keep this commit pure so the test passes in isolation.)
+Create `src/city-resolve.js` with the two pure helpers and **no imports**:
 
 ```js
 /**
- * City Context
+ * City Resolve — pure helpers for city-context.js
  *
- * Resolves and holds the single active city (or neutral / null). Authority,
- * highest first: URL lock → ?city= param → saved preference → neutral. There
- * is no implicit default — neutral is a real, resolved state.
+ * Framework-free (no DOM, no imports) so the resolution chain and placeholder
+ * mapping are unit-testable in Node. The DOM/localStorage shell and public API
+ * live in city-context.js, which imports these. (Same split pattern as
+ * city-visibility-decide.js ↔ city-visibility.js.)
  *
- * `resolveActiveCity` and `buildPlaceholders` are pure (unit-tested). The DOM
- * shell, persistence, public API and boot are added below them.
+ * Active-city authority, highest first: URL lock → ?city= param → saved
+ * preference → neutral. There is no implicit default — neutral is a real,
+ * resolved state.
  */
-
-import { readCityList } from "./city-registry.js";
-import { setGlobal } from "./variables.js";
-
-const STORAGE_KEY = "bruce-city";
-const SAFETY_PASS_DELAYS = [500, 1500, 3500];
 
 /**
  * Decide the active city and whether to seed the saved preference.
@@ -362,14 +365,14 @@ export function buildPlaceholders(activeCity, knownVarKeys) {
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `node tests/city-context.test.mjs`
+Run: `node tests/city-resolve.test.mjs`
 Expected: PASS — `✓ all 12 assertions passed`.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add src/city-context.js tests/city-context.test.mjs
-git commit -m "feat(city): add city-context resolver + placeholder builder"
+git add src/city-resolve.js tests/city-resolve.test.mjs
+git commit -m "feat(city): add city-resolve pure resolver + placeholder builder"
 ```
 
 ---
@@ -377,13 +380,33 @@ git commit -m "feat(city): add city-context resolver + placeholder builder"
 ## Task 3: Context DOM shell, API & boot
 
 **Files:**
-- Modify: `src/city-context.js` (append shell below the pure helpers)
+- Create: `src/city-context.js`
 
 No automated test (DOM/global/localStorage). Verified by build + manual staging checks.
 
-- [ ] **Step 1: Append the shell to `src/city-context.js`**
+- [ ] **Step 1: Create `src/city-context.js`**
 
-Add below `buildPlaceholders`:
+Start with the module header, imports, and constants:
+
+```js
+/**
+ * City Context
+ *
+ * Resolves and holds the single active city (or neutral / null), pushes the
+ * active city's placeholders into variables.js, and exposes window.bruce.city.
+ * The pure resolution + placeholder logic lives in city-resolve.js; this file
+ * is the DOM/localStorage/boot shell around it.
+ */
+
+import { readCityList } from "./city-registry.js";
+import { setGlobal } from "./variables.js";
+import { resolveActiveCity, buildPlaceholders } from "./city-resolve.js";
+
+const STORAGE_KEY = "bruce-city";
+const SAFETY_PASS_DELAYS = [500, 1500, 3500];
+```
+
+Then the state, inputs, apply/resolve, API, and boot:
 
 ```js
 // ── State ────────────────────────────────────────────────────
@@ -542,15 +565,15 @@ if (document.readyState === "loading") {
 }
 ```
 
-- [ ] **Step 2: Verify the pure tests still pass**
+- [ ] **Step 2: Confirm the pure resolver test still passes**
 
-Run: `node tests/city-context.test.mjs`
-Expected: PASS — `✓ all 12 assertions passed` (the appended shell must not break the helper exports).
+Run: `node tests/city-resolve.test.mjs`
+Expected: PASS — `✓ all 12 assertions passed` (city-context.js must not be imported by this test; it imports city-resolve.js directly).
 
 - [ ] **Step 3: Verify it compiles**
 
 Run: `pnpm build`
-Expected: Parcel completes with no errors (it bundles `src/index.js` — which still imports the old `./city.js` at this point; that's fine, this task only adds a new file).
+Expected: Parcel completes with no errors (it bundles `src/index.js` — which still imports the old `./city.js` at this point; that's fine, this task only adds a new file). Note: `city-context.js` cannot be run under bare `node` because it imports `variables.js` (top-level DOM side effects); Parcel bundling for the browser is the correct verification here.
 
 - [ ] **Step 4: Commit**
 
@@ -993,7 +1016,7 @@ Expected: `rm 'src/city.js'`.
 
 Run:
 ```bash
-pnpm build && node tests/city-registry.test.mjs && node tests/city-context.test.mjs && node tests/city-visibility-decide.test.mjs
+pnpm build && node tests/city-registry.test.mjs && node tests/city-resolve.test.mjs && node tests/city-visibility-decide.test.mjs
 ```
 Expected: Parcel completes with no errors; three lines `✓ all N assertions passed`.
 
