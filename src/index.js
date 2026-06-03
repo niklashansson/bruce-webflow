@@ -2,6 +2,7 @@ import "./nav.js";
 import "./announcements.js";
 import "./modal.js";
 import "./accordion.js";
+import "./faq.js";
 import "./collapsible.js";
 import "./dropdown.js";
 import "./variables.js";
