@@ -46,6 +46,7 @@ const F = {
   source: '[data-faq-element="source"]',
   target: '[data-faq-element="target"]',
   section: "data-faq-section",
+  keepEmpty: "data-faq-keep-empty",
 };
 
 /** Build all FAQ components on the page, then (re)init accordions. */
@@ -74,7 +75,7 @@ export function initFaq() {
     );
     const itemSlugs = itemEls.map((el) => el.getAttribute(F.section) || "");
 
-    const { groups, orphanItemIndexes, emptyTargetSlugs } = planFaqNesting(
+    const { groups, orphanItemIndexes } = planFaqNesting(
       targetSlugs,
       itemSlugs,
     );
@@ -99,11 +100,10 @@ export function initFaq() {
     });
 
     // Remove sections that received no items, unless told to keep them.
-    if (!attrBool(component, "data-faq-keep-empty")) {
-      emptyTargetSlugs.forEach((slug) => {
-        const target = targetEls.find(
-          (el) => el.getAttribute(F.section) === slug,
-        );
+    if (!attrBool(component, F.keepEmpty)) {
+      groups.forEach((group, groupIndex) => {
+        if (group.itemIndexes.length > 0) return;
+        const target = targetEls[groupIndex];
         const sectionItem = target?.closest('[data-accordion-element="item"]');
         (sectionItem?.closest(".w-dyn-item") || sectionItem)?.remove();
       });
