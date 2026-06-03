@@ -83,6 +83,22 @@ each item via the single-reference field (`{{ Item → Section → Slug }}`). Sl
 and stable. The marketer must set up the referenced-slug bind on the item — this is the one
 slightly non-obvious bind.
 
+**Section title bind (required).** The Section **Name** must be bound to the section
+toggle's text element (`.faq_item_toggle_text`). Without it the toggle ships the static
+placeholder ("Dropdown Text"). This is a Webflow content bind, not a `faq.js` concern.
+
+**Confirmed against live markup (2026-06-03).** The real Webflow export matches this
+contract: component root `.faq_sections_wrap`, items `.faq_item_wrap`, toggles
+`.faq_item_toggle_button`, content `.faq_item_content_wrap`, target
+`.faq_item_content_padding`. Webflow wraps both lists in `.u-display-contents .w-dyn-list`
+/ `.w-dyn-items` / `.w-dyn-item`; `faq.js` must locate items by `[data-faq-section]`
+regardless of these wrappers, and move the `[data-accordion-element="item"]` node itself
+(not its `.w-dyn-item` wrapper) so `accordion.js`'s `closest(list) === list` scoping holds.
+
+**Audience filtering: none.** All sections are intended to render together on the page
+(decision 2026-06-03). The Sections/Items collections contain multiple audiences
+(member + partner), but no per-page filtering is applied; `faq.js` renders every section.
+
 Accordion behavior attributes (`data-close-previous`, `data-close-on-second-click`,
 `data-open-on-hover`, `data-open-by-default`) are read by `accordion.js` as today and are
 not the concern of `faq.js`.
