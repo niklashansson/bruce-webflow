@@ -46,7 +46,6 @@ export function buildPlaceholders(activeCity, knownVarKeys) {
   const out = {
     city: activeCity ? activeCity.slug : "",
     "city-name": activeCity ? activeCity.name : "",
-    "city-path": activeCity ? `/${activeCity.slug}` : "",
   };
   for (const key of knownVarKeys) {
     out[key] = activeCity ? (activeCity.vars[key] ?? "") : "";

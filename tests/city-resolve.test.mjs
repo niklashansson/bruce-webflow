@@ -67,19 +67,19 @@ check(
 
 // ── buildPlaceholders ────────────────────────────────────────
 check(
-  "active city → city, city-name, city-path, vars",
+  "active city → city, city-name, vars",
   buildPlaceholders(CITIES[0], ["phone"]),
-  { city: "sto", "city-name": "Stockholm", "city-path": "/sto", phone: "8-1" },
+  { city: "sto", "city-name": "Stockholm", phone: "8-1" },
 );
 check(
   "neutral → all empty strings (incl. known var keys)",
   buildPlaceholders(null, ["phone"]),
-  { city: "", "city-name": "", "city-path": "", phone: "" },
+  { city: "", "city-name": "", phone: "" },
 );
 check(
   "var key missing on active city → empty string",
   buildPlaceholders(CITIES[0], ["phone", "hours"]),
-  { city: "sto", "city-name": "Stockholm", "city-path": "/sto", phone: "8-1", hours: "" },
+  { city: "sto", "city-name": "Stockholm", phone: "8-1", hours: "" },
 );
 
 console.log(`✓ all ${passed} assertions passed`);

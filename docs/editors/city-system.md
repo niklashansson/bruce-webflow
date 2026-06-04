@@ -56,11 +56,11 @@ none of these always shows.
 |---|---|---|
 | `{{city-name}}` | Stockholm | (blank) |
 | `{{city}}` | stockholm | (blank) |
-| `{{city-path}}` | /stockholm | (blank) |
 | `{{phone}}` (any city var) | that city's value | (blank) |
 
-Tip for links: `/memberships{{city-path}}` becomes `/memberships/stockholm`
-when a city is active, and `/memberships` when neutral — so it never breaks.
+Links to a city's Memberships or Studios page resolve automatically — just
+link to `/memberships` or `/studios` as normal and the visitor's city is
+applied for them. No `{{...}}` needed.
 
 ## What visitors see before picking a city
 
