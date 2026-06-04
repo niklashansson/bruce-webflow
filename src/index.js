@@ -9,6 +9,7 @@ import "./variables.js";
 import "./city-context.js";
 import "./city-visibility.js";
 import "./city-switcher.js";
+import "./city-links.js";
 import "./location.js";
 import "./slider.js";
 import "./tab.js";
