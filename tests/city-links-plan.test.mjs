@@ -29,6 +29,7 @@ check("other section exact match", matchSection("/studios", GATEWAYS), "studios"
 check("sub-page → null", matchSection("/memberships/foretag", GATEWAYS), null);
 check("unrelated path → null", matchSection("/about", GATEWAYS), null);
 check("empty gateways → null", matchSection("/memberships", {}), null);
+check("trailing slash in gateway value → still matches", matchSection("/memberships", { memberships: "/memberships/" }), "memberships");
 
 // ── resolveHref ──────────────────────────────────────────────
 check(
@@ -55,6 +56,11 @@ check(
   "query + hash preserved on neutral fallback",
   resolveHref({ section: "memberships", search: "?plan=pro", hash: "#faq" }, { gateways: GATEWAYS, linkMap: LINK_MAP, active: null }),
   "/memberships?plan=pro#faq",
+);
+check(
+  "unknown section (not in gateways) → empty base, never the string 'undefined'",
+  resolveHref({ section: "nope", search: "", hash: "" }, { gateways: GATEWAYS, linkMap: LINK_MAP, active: null }),
+  "",
 );
 
 console.log(`✓ all ${passed} assertions passed`);

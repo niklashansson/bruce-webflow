@@ -40,6 +40,6 @@ export function matchSection(pathname, gateways) {
  */
 export function resolveHref({ section, search, hash }, { gateways, linkMap, active }) {
   const cityUrl = active ? linkMap[section]?.[active] : null;
-  const base = cityUrl ?? gateways[section];
+  const base = cityUrl ?? gateways[section] ?? "";
   return base + search + hash;
 }
