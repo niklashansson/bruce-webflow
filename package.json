@@ -4,7 +4,7 @@
   "description": "",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "parcel build src/index.js src/studio.js src/explorer.js --dist-dir dist --no-scope-hoist",
+    "build": "parcel build src/index.js src/studio.js src/explorer.js --dist-dir dist",
     "start": "parcel src/index.js src/studio.js src/explorer.js"
   },
   "keywords": [],
