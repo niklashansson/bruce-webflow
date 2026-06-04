@@ -20,6 +20,9 @@
 - `tests/city-links-plan.test.mjs` — **new**, framework-free unit tests for the pure core.
 - `src/city-links.js` — **new**, DOM shell. Reads source elements, WeakMap of managed links, `apply()`, boot.
 - `src/index.js` — **modify**, add one import after `./city-switcher.js`.
+- `src/city-resolve.js` — **modify**, remove the legacy `city-path` placeholder (Task 3).
+- `tests/city-resolve.test.mjs` — **modify**, drop `city-path` expectations (Task 3).
+- `docs/editors/city-system.md` — **modify**, remove `{{city-path}}` docs (Task 3).
 
 ---
 
@@ -315,7 +318,90 @@ git commit -m "feat(city): auto-rewrite gateway links to active city page"
 
 ---
 
-## Task 3: Build & deploy
+## Task 3: Remove the legacy `city-path` placeholder (TDD)
+
+The new auto-rewrite replaces the old `/memberships{{city-path}}` mechanism.
+Remove only the `city-path` placeholder; `city` and `city-name` stay (still
+used for text). Historical specs/plans (`2026-06-02-city-system*`) are
+snapshots and are left untouched; only the live editor doc is updated.
+
+**Files:**
+- Modify: `src/city-resolve.js` (remove the `city-path` key in `buildPlaceholders`)
+- Modify: `tests/city-resolve.test.mjs` (drop `city-path` from 3 expectations + label)
+- Modify: `docs/editors/city-system.md` (remove the `{{city-path}}` row + link tip)
+
+- [ ] **Step 1: Update the failing test first**
+
+In `tests/city-resolve.test.mjs`, change the three `buildPlaceholders`
+assertions (lines ~69–83) to drop `city-path`:
+
+```js
+// ── buildPlaceholders ────────────────────────────────────────
+check(
+  "active city → city, city-name, vars",
+  buildPlaceholders(CITIES[0], ["phone"]),
+  { city: "sto", "city-name": "Stockholm", phone: "8-1" },
+);
+check(
+  "neutral → all empty strings (incl. known var keys)",
+  buildPlaceholders(null, ["phone"]),
+  { city: "", "city-name": "", phone: "" },
+);
+check(
+  "var key missing on active city → empty string",
+  buildPlaceholders(CITIES[0], ["phone", "hours"]),
+  { city: "sto", "city-name": "Stockholm", phone: "8-1", hours: "" },
+);
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `node tests/city-resolve.test.mjs`
+Expected: FAIL — actual still contains `"city-path": "/sto"`, so `deepEqual` mismatches.
+
+- [ ] **Step 3: Remove the placeholder from the implementation**
+
+In `src/city-resolve.js`, delete the `city-path` line from the `out` object in
+`buildPlaceholders` (currently line 49):
+
+```js
+  const out = {
+    city: activeCity ? activeCity.slug : "",
+    "city-name": activeCity ? activeCity.name : "",
+  };
+```
+
+(The `"city-path": activeCity ? `/${activeCity.slug}` : "",` line is removed.)
+
+- [ ] **Step 4: Run both city test suites to verify green**
+
+Run: `node tests/city-resolve.test.mjs && node tests/city-links-plan.test.mjs`
+Expected: both print `✓ all N assertions passed`.
+
+- [ ] **Step 5: Update the editor doc**
+
+In `docs/editors/city-system.md`, remove the `{{city-path}}` table row
+(line ~59) and the two-line "Tip for links" paragraph (lines ~62–63). Replace
+the tip with:
+
+```md
+Links to a city's Memberships or Studios page resolve automatically — just
+link to `/memberships` or `/studios` as normal and the visitor's city is
+applied for them. No `{{...}}` needed.
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/city-resolve.js tests/city-resolve.test.mjs docs/editors/city-system.md
+git commit -m "refactor(city): drop legacy city-path placeholder
+
+Superseded by the auto gateway-link rewrite (city-links.js)."
+```
+
+---
+
+## Task 4: Build & deploy
 
 **Files:**
 - Modify: `dist/index.js`, `dist/index.js.map` (Parcel output)
