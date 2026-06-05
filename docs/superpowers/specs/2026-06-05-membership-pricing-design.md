@@ -67,10 +67,9 @@ for display. `discount` is `null` when there is no saving (`list_price === price
   data-pricing-fraction-digits="0"        ← optional, default 0
   data-pricing-endpoint="https://…"       ← optional endpoint override
 
-  [data-pricing-variant="committed"]      ← per-variant container; gets is-discounted toggled
-     [data-price-slot="committed.price"]
-     [data-price-slot="committed.list_price"]
-     [data-price-slot="committed.discount"]   ← formatted discount.amount
+  [data-price-slot="committed.price"]     ← text elements, anywhere inside the card
+  [data-price-slot="committed.list_price"]
+  [data-price-slot="committed.discount"]   ← formatted discount.amount
   …repeat for flexible / prepaid
 ```
 
@@ -78,6 +77,8 @@ for display. `discount` is `null` when there is no saving (`list_price === price
   regardless of nesting depth within the card.
 - Fields per variant: `price`, `list_price`, `discount` (maps to `discount.amount`).
 - Variants: `flexible`, `committed`, `prepaid`.
+- Discount visibility (e.g. hiding `list_price`/`discount` when there is no saving)
+  is handled in Webflow conditionally; the module does not toggle any classes.
 
 ## Formatting
 
@@ -98,11 +99,10 @@ Number only — no currency symbol (Webflow supplies the unit):
    do nothing — Webflow defaults remain.
 2. **Fetch:** deduped by a `Map<"city|campaign", Promise<json>>`, so multiple tier
    cards sharing the same city+campaign trigger a single network request.
-3. **Apply:** locate the tier whose `tier_code` matches `data-pricing-tier`. For
-   each variant, fill every matching `data-price-slot` by its dotted key. Toggle
-   `is-discounted` on `[data-pricing-variant="{variant}"]` when that variant's
-   `discount` is non-null; remove it otherwise. All slots are filled regardless of
-   discount state (per Q6: "toggle a state class", site owns the CSS).
+3. **Apply:** locate the tier whose `tier_code` matches `data-pricing-tier`. Fill
+   every matching `data-price-slot` by its dotted key. A `*.discount` slot is only
+   filled when that variant has a discount; otherwise the slot is left untouched.
+   No class toggling — discount visibility is owned by Webflow.
 4. **Failure / missing tier / network or parse error:** `console.warn`, leave the
    Webflow defaults untouched. No loading or error UI.
 5. **Idempotent:** a card that has already been applied is skipped on later safety
@@ -116,10 +116,10 @@ CMS content, matching `city-context.js` / `city-links.js`.
 ## Files
 
 - `src/membership-pricing-format.js` — pure: `formatPrice(minorUnits, opts)`,
-  `buildTierView(tier, { locale, fractionDigits })` → `{ slots: Record<string,string>,
-  discounted: Record<variant, boolean> }`. No DOM. Independently testable.
+  `findTier(payload, tierCode)`, `buildTierView(tier, { locale, fractionDigits })`
+  → `Record<string,string>` slot map. No DOM. Independently testable.
 - `src/membership-pricing.js` — DOM shell: scan cards, read attributes, gate,
-  deduped fetch, apply slot map + toggle classes, boot + safety passes.
+  deduped fetch, fill text slots, boot + safety passes.
 - `src/index.js` — add `import "./membership-pricing.js";`.
 
 ## Edge Cases
@@ -127,5 +127,5 @@ CMS content, matching `city-context.js` / `city-links.js`.
 - Card missing `data-pricing-tier` or tier absent in response → warn, skip card.
 - A `data-price-slot` key with no corresponding value in the response → leave that
   slot's existing text.
-- Variant present in DOM but absent in response → leave its slots; do not toggle.
+- Variant present in DOM but absent in response → leave its slots untouched.
 - Endpoint returns non-2xx or invalid JSON → warn, keep defaults.

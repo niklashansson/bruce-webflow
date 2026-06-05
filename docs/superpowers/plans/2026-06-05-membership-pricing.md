@@ -4,7 +4,7 @@
 
 **Goal:** Fetch campaign-specific membership discount pricing on the client (per city + campaign code) and write it into self-contained Webflow pricing cards, leaving defaults untouched when codes are absent or the request fails.
 
-**Architecture:** Two files following the codebase's DOM-shell + pure-logic split (like `city-context.js` ↔ `city-resolve.js`). `membership-pricing-format.js` is framework-free (formatting + response shaping, unit-tested in Node). `membership-pricing.js` is the DOM/fetch/boot shell (scans `[data-pricing-card]`, deduped fetch keyed on city+campaign, applies slots, toggles `is-discounted`). Registered in `src/index.js`.
+**Architecture:** Two files following the codebase's DOM-shell + pure-logic split (like `city-context.js` ↔ `city-resolve.js`). `membership-pricing-format.js` is framework-free (formatting + response shaping, unit-tested in Node). `membership-pricing.js` is the DOM/fetch/boot shell (scans `[data-pricing-card]`, deduped fetch keyed on city+campaign, fills `data-price-slot` text elements). Discount visibility is handled in Webflow — the module toggles no classes. Registered in `src/index.js`.
 
 **Tech Stack:** Vanilla ES modules, Parcel bundler, `Intl`/`toLocaleString` for formatting, framework-free `node:assert` tests (`*.test.mjs`).
 
@@ -160,19 +160,16 @@ check("findTier missing → null", findTier(PAYLOAD, "BLACK"), null);
 check("findTier null payload → null", findTier(null, "EPIC"), null);
 check("findTier payload without tiers → null", findTier({}, "EPIC"), null);
 
-// ── buildTierView ────────────────────────────────────────────
+// ── buildTierView (returns a flat slot map) ──────────────────
 const epic = buildTierView(findTier(PAYLOAD, "EPIC"), { locale: "en-US" });
-check("price slot filled", epic.slots["committed.price"], "1,099");
-check("list_price slot filled", epic.slots["committed.list_price"], "1,499");
-check("discount slot filled when present", epic.slots["flexible.discount"], "400");
-check("no discount slot when discount null", "prepaid.discount" in epic.slots, false);
-check("discounted true for variant with discount", epic.discounted.committed, true);
-check("discounted false for variant without discount", epic.discounted.prepaid, false);
-check("prepaid price still filled", epic.slots["prepaid.price"], "15,719");
+check("price slot filled", epic["committed.price"], "1,099");
+check("list_price slot filled", epic["committed.list_price"], "1,499");
+check("discount slot filled when present", epic["flexible.discount"], "400");
+check("no discount slot when discount null", "prepaid.discount" in epic, false);
+check("prepaid price still filled", epic["prepaid.price"], "15,719");
 
 const empty = buildTierView(null, { locale: "en-US" });
-check("null tier → empty slots", empty.slots, {});
-check("null tier → empty discounted", empty.discounted, {});
+check("null tier → empty slot map", empty, {});
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -197,40 +194,38 @@ export function findTier(payload, tierCode) {
 }
 
 /**
- * Shape a tier's prices into a flat slot map keyed "{variant}.{field}" plus a
- * per-variant discounted flag. Only fills slots whose source values are present
- * (numeric). `discount` slot maps to discount.amount and is omitted when the
- * variant has no discount.
+ * Shape a tier's prices into a flat slot map keyed "{variant}.{field}". Only
+ * fills slots whose source values are present (numeric). The `discount` slot maps
+ * to discount.amount and is omitted when the variant has no discount (discount
+ * visibility is handled in Webflow).
  *
  * @param {{prices?: Record<string, {list_price?: number, price?: number, discount?: {amount?: number}|null}>}|null|undefined} tier
  * @param {{locale?: string, fractionDigits?: number}} [opts]
- * @returns {{slots: Record<string,string>, discounted: Record<string,boolean>}}
+ * @returns {Record<string,string>}
  */
 export function buildTierView(tier, opts = {}) {
   /** @type {Record<string,string>} */
   const slots = {};
-  /** @type {Record<string,boolean>} */
-  const discounted = {};
   const prices = tier?.prices;
-  if (!prices) return { slots, discounted };
+  if (!prices) return slots;
 
   for (const variant of Object.keys(prices)) {
     const p = prices[variant];
     if (!p) continue;
     if (typeof p.price === "number") slots[`${variant}.price`] = formatPrice(p.price, opts);
     if (typeof p.list_price === "number") slots[`${variant}.list_price`] = formatPrice(p.list_price, opts);
-    const hasDiscount = p.discount != null && typeof p.discount.amount === "number";
-    if (hasDiscount) slots[`${variant}.discount`] = formatPrice(p.discount.amount, opts);
-    discounted[variant] = hasDiscount;
+    if (p.discount != null && typeof p.discount.amount === "number") {
+      slots[`${variant}.discount`] = formatPrice(p.discount.amount, opts);
+    }
   }
-  return { slots, discounted };
+  return slots;
 }
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `node tests/membership-pricing-format.test.mjs`
-Expected: PASS — `✓ all 19 assertions passed`.
+Expected: PASS — `✓ all 16 assertions passed`.
 
 - [ ] **Step 5: Commit**
 
@@ -273,15 +268,16 @@ Create `src/membership-pricing.js`:
  *     data-pricing-locale="sv-SE"       — optional, default "sv-SE"
  *     data-pricing-fraction-digits="0"  — optional, default 0
  *     data-pricing-endpoint="https://…" — optional endpoint override
- *     [data-pricing-variant="committed"]      — gets is-discounted toggled
- *       [data-price-slot="committed.price"]   — filled by "{variant}.{field}" key
+ *     [data-price-slot="committed.price"]     — text element, filled by "{variant}.{field}" key
+ *
+ * Discount visibility (hiding list_price/discount when there is no saving) is
+ * handled in Webflow conditionally; this module only fills text slots.
  */
 
 import { buildTierView, findTier } from "./membership-pricing-format.js";
 
 const DEFAULT_ENDPOINT = "https://api.bruce.app/partner/membership/info";
 const SAFETY_PASS_DELAYS = [500, 1500, 3500];
-const DISCOUNTED_CLASS = "is-discounted";
 
 /** @type {WeakSet<Element>} cards already applied (or in-flight) */
 const applied = new WeakSet();
@@ -330,18 +326,11 @@ function applyCard(card, payload) {
   const fractionDigits =
     fdAttr != null && fdAttr.trim() !== "" ? Number(fdAttr) : 0;
 
-  const { slots, discounted } = buildTierView(tier, { locale, fractionDigits });
+  const slots = buildTierView(tier, { locale, fractionDigits });
 
   card.querySelectorAll("[data-price-slot]").forEach((el) => {
     const slotKey = el.getAttribute("data-price-slot")?.trim();
     if (slotKey && slotKey in slots) el.textContent = slots[slotKey];
-  });
-
-  card.querySelectorAll("[data-pricing-variant]").forEach((el) => {
-    const variant = el.getAttribute("data-pricing-variant")?.trim();
-    if (variant && variant in discounted) {
-      el.classList.toggle(DISCOUNTED_CLASS, discounted[variant]);
-    }
   });
 }
 
@@ -410,7 +399,7 @@ import "./membership-pricing.js";
 - [ ] **Step 2: Run the full test suite**
 
 Run: `node tests/membership-pricing-format.test.mjs`
-Expected: PASS — `✓ all 19 assertions passed`.
+Expected: PASS — `✓ all 16 assertions passed`.
 
 - [ ] **Step 3: Build to verify bundling**
 
@@ -437,7 +426,7 @@ git commit -m "feat(pricing): register membership-pricing module"
 - Self-contained cards, each with own attributes → Task 3 attribute reads. ✓
 - Deduped fetch by city+campaign → Task 3 `fetchCache`. ✓
 - Dotted `data-price-slot` keys, fill by lookup regardless of nesting → Task 2 `buildTierView` + Task 3 `applyCard`. ✓
-- `is-discounted` toggle on `[data-pricing-variant]`, all slots filled → Task 3 `applyCard`. ✓
+- Discount visibility owned by Webflow; module toggles no classes → Task 3 `applyCard` (slot fill only). ✓
 - Number-only formatting, ÷100, locale grouping, fraction-digits default 0 → Task 1 `formatPrice`. ✓
 - Silent keep-defaults on missing tier / network / parse error → Task 3 warns + returns. ✓
 - Idempotent via WeakSet, boot + safety passes → Task 3. ✓
@@ -447,6 +436,5 @@ git commit -m "feat(pricing): register membership-pricing module"
 **Placeholder scan:** none — all code blocks are complete.
 
 **Type consistency:** `formatPrice(minorUnits, opts)`, `findTier(payload, tierCode)`,
-`buildTierView(tier, opts) → {slots, discounted}` used identically across Task 2
-tests, Task 2 impl, and Task 3 shell. `DISCOUNTED_CLASS = "is-discounted"` matches
-the spec. ✓
+`buildTierView(tier, opts) → Record<string,string>` used identically across Task 2
+tests, Task 2 impl, and Task 3 shell. No class-toggling code remains. ✓
