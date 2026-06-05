@@ -47,7 +47,7 @@ function fetchPricing(endpoint, city, campaign) {
   let promise = fetchCache.get(key);
   if (!promise) {
     const url = new URL(endpoint);
-    url.searchParams.set("city_code", city.toLowerCase());
+    url.searchParams.set("city_code", city);
     url.searchParams.set("campaign_code", campaign);
     promise = fetch(url.toString())
       .then((res) => {
@@ -55,7 +55,7 @@ function fetchPricing(endpoint, city, campaign) {
         return res.json();
       })
       .catch((err) => {
-        fetchCache.delete(key); // let a later safety pass retry
+        fetchCache.delete(key); // evict so a later safety pass can retry
         throw err;
       });
     fetchCache.set(key, promise);
@@ -86,7 +86,9 @@ function applyCard(card, payload) {
 
 function processCard(card) {
   if (applied.has(card)) return;
-  const city = card.getAttribute("data-pricing-city")?.trim();
+  // Lowercase city once at read time so the dedup key and the request param are
+  // always derived from the same normalized value (STO and sto share one fetch).
+  const city = card.getAttribute("data-pricing-city")?.trim().toLowerCase();
   const campaign = card.getAttribute("data-pricing-campaign")?.trim();
   if (!city || !campaign) return; // gate: only fetch when both are populated
 
@@ -94,7 +96,7 @@ function processCard(card) {
   fetchPricing(endpointFor(card), city, campaign)
     .then((payload) => applyCard(card, payload))
     .catch((err) => {
-      applied.delete(card); // failed — let a later safety pass retry
+      applied.delete(card); // released for retry by a later safety pass (no-op after the last)
       console.warn("[bruce.pricing] fetch failed", err);
     });
 }
