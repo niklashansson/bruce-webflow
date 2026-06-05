@@ -13,4 +13,5 @@ import "./city-links.js";
 import "./location.js";
 import "./slider.js";
 import "./tab.js";
+import "./membership-pricing.js";
 import "./visual-video.js";
