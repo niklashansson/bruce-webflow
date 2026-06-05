@@ -17,7 +17,7 @@ function check(label, actual, expected) {
 
 // ── formatPrice ──────────────────────────────────────────────
 check("divides minor units by 100, no decimals", formatPrice(129900, { locale: "en-US" }), "1,299");
-check("rounds to whole by default", formatPrice(611900, { locale: "en-US" }), "6,119");
+check("rounds half-up to whole by default", formatPrice(611950, { locale: "en-US" }), "6,120");
 check("discount amount", formatPrice(40000, { locale: "en-US" }), "400");
 check("large value grouped", formatPrice(1571900, { locale: "en-US" }), "15,719");
 check("respects fractionDigits", formatPrice(129900, { locale: "en-US", fractionDigits: 2 }), "1,299.00");
