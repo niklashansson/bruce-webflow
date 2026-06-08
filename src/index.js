@@ -14,4 +14,5 @@ import "./location.js";
 import "./slider.js";
 import "./tab.js";
 import "./membership-pricing.js";
+import "./price-format.js";
 import "./visual-video.js";
