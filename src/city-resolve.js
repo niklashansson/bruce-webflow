@@ -14,8 +14,10 @@
 /**
  * Decide the active city and whether to seed the saved preference.
  *
- * Seeding happens only when a valid lock is present AND there is no *valid*
- * saved preference (a stale/removed slug counts as none, so it gets replaced).
+ * A valid URL lock persists: it always seeds the saved preference, so
+ * navigating to a city page (the same act as clicking a switcher) sticks. The
+ * ?city= param stays transient (never seeds) — a shared/ad link previews a city
+ * without re-homing someone who already chose one.
  *
  * @param {{lock: string|null, param: string|null, saved: string|null}} inputs
  * @param {Array<{slug: string}>} cities
@@ -25,7 +27,7 @@ export function resolveActiveCity({ lock, param, saved }, cities) {
   const has = (s) => !!s && cities.some((c) => c.slug === s);
 
   if (has(lock)) {
-    return { active: lock, seedPreference: has(saved) ? null : lock };
+    return { active: lock, seedPreference: lock };
   }
   if (has(param)) return { active: param, seedPreference: null };
   if (has(saved)) return { active: saved, seedPreference: null };
