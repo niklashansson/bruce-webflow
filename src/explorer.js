@@ -913,12 +913,20 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     if (mapLoaded) render(getFeatures(), { fit: true });
   }
 
-  // Initial closed state + a11y baseline.
-  wrap.dataset[MAP_MODE_KEY] = "closed";
-  toggleEls.forEach((el) => el.setAttribute("aria-pressed", "false"));
   toggleEls.forEach((el) =>
     el.addEventListener("click", () => setMapMode(!mapOpen)),
   );
+
+  // Default view from `data-explorer-map-default="open|closed"` on .explorer_wrap
+  // (default closed). Honoured only on a desktop split — opening by default on
+  // mobile would throw up a fullscreen overlay + bottom-sheet + scroll lock
+  // before any interaction, and forfeit the lazy map load on the weakest devices.
+  // setMapMode sets the mode attr + aria-pressed and handles everything an open
+  // implies (lazy init, placement, scroll lock, camera fit).
+  const defaultOpen =
+    wrap.getAttribute("data-explorer-map-default") === "open" &&
+    !isMobileLayout(wrap);
+  setMapMode(defaultOpen);
 
   if (toggleEls.length === 0) {
     console.warn(
