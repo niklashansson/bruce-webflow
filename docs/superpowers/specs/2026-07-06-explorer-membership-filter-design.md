@@ -61,10 +61,8 @@ Finsweet owns ALL matching. No custom predicate in the `filter` hook.
   - `fs-list-field="tier"`, `fs-list-operator="equal"`, no `fs-list-value`
     authored (JS maintains it).
   - Hook for JS: `data-explorer-element="exclusive-toggle"` on the input.
-  - Dynamic tier name slot inside its label:
-    `<span data-explorer-element="exclusive-tier-slot">BLACK</span>` — JS
-    writes the selected membership's display name, read from the selected
-    radio's own label text (stays Designer-authored).
+  - The label copy is **static**, authored in Webflow (e.g. "Show exclusive
+    to BLACK") — no dynamic tier-name slot.
 - **State attributes on `.explorer_wrap`** (CSS reads these, same pattern as
   `data-state` / `data-explorer-map`):
   - `data-explorer-membership="<value>"` — present while a membership is
@@ -86,7 +84,7 @@ restore on load):
 3. If no membership is selected: uncheck the toggle via `.click()` (never
    `.checked = false` — Finsweet model + Webflow custom-input visuals), set
    `data-explorer-exclusive-available="false"`.
-4. Update the wrap attributes and the label slot.
+4. Update the wrap attributes.
 5. In `reflectFilters`, **skip** the toggle input when counting badges — the
    toggle must never count into the "Memberships ①" badge or the grand total
    (it does still keep `data-explorer-filtered` semantics via the radio).
@@ -101,8 +99,7 @@ filter-hook predicate are dropped.)
   state flow through the existing hooks untouched.
 - Toggle on → condition `tier equal X` activates → exclusive set.
 - Switching membership while toggle is on → glue updates `fs-list-value` +
-  dispatches `change` → narrowing follows the new membership; toggle stays on;
-  label slot updates.
+  dispatches `change` → narrowing follows the new membership; toggle stays on.
 - Membership cleared → toggle force-unchecked + hidden; list back to
   unfiltered.
 - Mobile map mode: the filter bar (the whole form, toggle included) already
