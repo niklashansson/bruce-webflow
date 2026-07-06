@@ -100,7 +100,8 @@ filter-hook predicate are dropped.)
   state flow through the existing hooks untouched.
 - Toggle on → condition `tier equal X` activates → exclusive set.
 - Switching membership while toggle is on → glue updates `fs-list-value` +
-  dispatches `change` → narrowing follows the new membership; toggle stays on.
+  dispatches `input`/`change` → narrowing follows the new membership; toggle
+  stays on.
 - Membership cleared → toggle force-unchecked + hidden; list back to
   unfiltered.
 - Mobile map mode: the filter bar (the whole form, toggle included) already
