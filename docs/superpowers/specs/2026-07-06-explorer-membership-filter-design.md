@@ -79,8 +79,9 @@ restore on load):
 
 1. Resolve the selected membership from the checked radio (dedupe across
    copies).
-2. Set the toggle input's `fs-list-value` to it and dispatch a bubbling
-   `change` event on the toggle input so Finsweet re-reads the condition.
+2. Set the toggle input's `fs-list-value` to it and dispatch both bubbling
+   `input` and `change` events on the toggle input so Finsweet re-reads the
+   condition (Finsweet's `fs-list-filteron` default is `input`).
 3. If no membership is selected: uncheck the toggle via `.click()` (never
    `.checked = false` — Finsweet model + Webflow custom-input visuals), set
    `data-explorer-exclusive-available="false"`.

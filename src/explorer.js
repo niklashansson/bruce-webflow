@@ -229,11 +229,16 @@ function syncExclusiveToggle(form) {
   // click (never .checked — that desyncs Finsweet and the Webflow visuals).
   if (!selected && toggle.checked) toggle.click();
 
-  // Rewrite + re-dispatch only when the value really changed. The dispatched
-  // change re-enters this function through the form's change listener; this
-  // equality check is what terminates that recursion.
+  // Rewrite + re-dispatch only when the value really changed. Finsweet
+  // re-reads the condition on the form's `fs-list-filteron` event, which
+  // DEFAULTS to "input" — a synthetic "change" alone is never heard and the
+  // stale tier would keep filtering. Dispatch both so the rewrite lands
+  // whichever event the form is authored with; our own form listener hears
+  // the "change", re-enters this function, and terminates on this equality
+  // check.
   if (toggle.getAttribute("fs-list-value") !== selected) {
     toggle.setAttribute("fs-list-value", selected);
+    toggle.dispatchEvent(new Event("input", { bubbles: true }));
     toggle.dispatchEvent(new Event("change", { bubbles: true }));
   }
 
