@@ -1,6 +1,6 @@
 # Explorer membership filter: single-select + "exclusive to" toggle
 
-**Date:** 2026-07-06
+**Date:** 2026-07-06 (revised same day: native-first via radios + dynamic `fs-list-value`)
 **Owner:** explorer.js (per-city explorer page)
 **Status:** Approved
 
@@ -27,117 +27,117 @@ Each studio card carries two Finsweet fields:
 
 Because a studio with `tier = X` always has X in its `tiers` string, the
 exclusive set is a **strict subset** of the included set. The toggle only ever
-*narrows* the natively filtered list — no negation/inversion is needed
-anywhere.
+*narrows* — no negation is needed, so both conditions can AND together
+natively.
 
-## Approach: native-first
+## Approach: fully native Finsweet, JS is glue only
 
-The membership checkboxes stay **fully native Finsweet fields**
-(`fs-list-field="tiers"` + `fs-list-operator="contain"`, as already configured
-in Webflow). Included-mode filtering, URL deep-linking (`fs-list-showquery`),
-badge counting (`reflectFilters`), and "Clear all" keep working with no new
-code.
+Finsweet owns ALL matching. No custom predicate in the `filter` hook.
 
-JS adds three things:
+- **Membership single-select**: the tier inputs are **radios** (changed in
+  Webflow) with `fs-list-field="tiers"` + `fs-list-operator="contain"`.
+  Radio semantics give single-select natively; selecting X yields the
+  condition `tiers contain X` → the *included* set.
+- **Exclusive toggle**: a checkbox **inside the filters form** (placed there
+  in Webflow) with `fs-list-field="tier"` + `fs-list-operator="equal"` and
+  **no static value**. JS keeps its `fs-list-value` attribute set to the
+  currently selected membership and dispatches a `change` event on it whenever
+  the selection changes. Checked, it adds the condition `tier equal X`, which
+  ANDs with the radio condition → the *exclusive* set.
 
-1. **Single-select enforcement** (explorer.js)
-   On `change`, when a membership checkbox becomes checked, uncheck every
-   checked membership input with a **different** value — across all copies
-   (toolbar dropdown + modal) — by calling `.click()` on them. Never set
-   `.checked` directly (desyncs both the Finsweet model and Webflow's custom
-   checkbox visuals). Re-clicking the selected membership unchecks it → back
-   to no selection.
-
-2. **Exclusive toggle** (explorer.js + pure module)
-   A plain clickable element. When ON, the existing Finsweet `filter` hook
-   narrows the natively filtered items to cards whose `tier` text equals the
-   selected membership — structurally identical to the "search this area"
-   narrowing already in that hook (but persistent, not one-shot). Re-runs via
-   `fsListInstance.triggerHook("filter")` on every toggle/membership change.
-
-3. **One URL param**: `exclusive=1`, written with `history.replaceState`
-   (present only while ON). The membership itself persists via Finsweet's
-   native query URL. `syncCityLinks` already copies `location.search`
-   wholesale, so both carry across city switches for free.
+  Verified against the Finsweet v2 source (`packages/list/src/filter/standard/
+  conditions.ts`): a condition's value is re-read from the input's
+  `fs-list-value` on every `change` event of that input, and conditions are
+  keyed by `field_op`, so `tiers_contain` (radio) and `tier_equal` (toggle)
+  coexist cleanly.
 
 ## Markup contract (Webflow)
 
-New elements/attributes — the only Webflow build work:
-
-- **Toggle row** (sits next to the count, per the mockup):
-  - Clickable element: `data-explorer-element="exclusive-toggle"`. JS binds
-    click and maintains `aria-pressed`.
+- **Membership radios** (already done): `fs-list-field="tiers"`,
+  `fs-list-operator="contain"`, `fs-list-value="base|black|epic"`, one radio
+  group across the toolbar dropdown / modal copies.
+- **Toggle checkbox** (already placed inside the `<form fs-list-element="filters">`
+  subtree — required, Finsweet only reads inputs inside the form):
+  - `fs-list-field="tier"`, `fs-list-operator="equal"`, no `fs-list-value`
+    authored (JS maintains it).
+  - Hook for JS: `data-explorer-element="exclusive-toggle"` on the input.
   - Dynamic tier name slot inside its label:
     `<span data-explorer-element="exclusive-tier-slot">BLACK</span>` — JS
-    writes the **selected** membership's display name, read from that
-    membership checkbox's own label text (stays Designer-authored).
+    writes the selected membership's display name, read from the selected
+    radio's own label text (stays Designer-authored).
 - **State attributes on `.explorer_wrap`** (CSS reads these, same pattern as
   `data-state` / `data-explorer-map`):
   - `data-explorer-membership="<value>"` — present while a membership is
     selected, absent otherwise.
   - `data-explorer-exclusive-available="true|false"` — CSS shows the toggle
-    row only when `true` (i.e. a membership is selected — any membership,
-    including the top tier).
-  - `data-explorer-exclusive="true|false"` — toggle state; styles the switch
-    and may restyle cards.
+    row only when `true` (a membership is selected — any tier, including the
+    top one).
+  - `data-explorer-exclusive="true|false"` — toggle state, styles the switch.
 
-The membership checkboxes themselves are **unchanged** (keep
-`fs-list-field="tiers"`, `fs-list-operator="contain"`, `fs-list-value`).
-JS identifies the membership group as checkbox inputs carrying
-`fs-list-field="tiers"` inside the filters form(s) — no extra attribute
-needed; the category group uses a different field key.
+## JS responsibilities (glue only)
+
+On membership radio change and on `afterRender` (covers Finsweet's URL
+restore on load):
+
+1. Resolve the selected membership from the checked radio (dedupe across
+   copies).
+2. Set the toggle input's `fs-list-value` to it and dispatch a bubbling
+   `change` event on the toggle input so Finsweet re-reads the condition.
+3. If no membership is selected: uncheck the toggle via `.click()` (never
+   `.checked = false` — Finsweet model + Webflow custom-input visuals), set
+   `data-explorer-exclusive-available="false"`.
+4. Update the wrap attributes and the label slot.
+5. In `reflectFilters`, **skip** the toggle input when counting badges — the
+   toggle must never count into the "Memberships ①" badge or the grand total
+   (it does still keep `data-explorer-filtered` semantics via the radio).
+
+No new pure module: the glue is DOM-centric and thin; small helpers live in
+explorer.js. (The previously planned `src/explorer-membership.js` +
+filter-hook predicate are dropped.)
 
 ## Behavior
 
-- **Selection changes** (single-select enforcement, above) flow through
-  Finsweet natively; the filter hook + `afterRender` update count, badges,
-  empty state, and the map as they already do.
-- **Toggle click**: flip state → update wrap attributes + label slot + URL
-  param → `triggerHook("filter")`.
-- **Availability**: whenever no membership is selected, the toggle is hidden
-  (`data-explorer-exclusive-available="false"`) and forced OFF. Switching
-  between memberships keeps the toggle state.
-- **Clear**: Finsweet's native `fs-list-element="clear"` unchecks the
-  membership inputs itself; a click listener on clear elements (global or
-  tier-scoped) additionally resets the toggle.
-- **Selected membership resolution**: derived from the currently checked
-  membership input(s) in the filters form(s); duplicated copies dedupe by
-  value. Re-read on each filter pass so Finsweet's URL restore on load is
-  picked up without ordering hacks.
-- **Badges**: unchanged — the toggle never counts as a filter badge; the
-  membership continues to count into the existing `tier` group via
-  `reflectFilters`.
+- Radio select → Finsweet filters to included set; badges/count/map/empty
+  state flow through the existing hooks untouched.
+- Toggle on → condition `tier equal X` activates → exclusive set.
+- Switching membership while toggle is on → glue updates `fs-list-value` +
+  dispatches `change` → narrowing follows the new membership; toggle stays on;
+  label slot updates.
+- Membership cleared → toggle force-unchecked + hidden; list back to
+  unfiltered.
+- Mobile map mode: the filter bar (the whole form, toggle included) already
+  moves into the bottom-sheet header via `placeFilterBar` — nothing new.
 
 ## Edge cases
 
 | Case | Behavior |
 | --- | --- |
-| No membership selected | Toggle hidden + OFF; list = today's behavior |
-| Toggle ON, membership unchecked/cleared | Toggle forced OFF + hidden |
-| Toggle ON, membership switched | Toggle stays ON, narrowing follows the new membership; label slot updates |
-| Card missing/empty `tier` text | Hidden in exclusive mode (can't prove exclusivity); included mode is native Finsweet behavior |
-| Exclusive set empty | Existing `empty` state renders — no special casing |
-| URL `exclusive=1` with no membership in URL | Ignored (toggle stays OFF/hidden) |
-| Multiple membership values checked at load (stale shared link) | First checked value wins; single-select enforcement corrects on next interaction |
+| No membership selected | Toggle hidden + unchecked; today's behavior |
+| Top tier selected | Toggle available like any other (`tier equal epic` = epic-exclusive studios) |
+| Card missing/empty `tier` text | Native `equal` never matches an empty field → hidden in exclusive mode (correct: can't prove exclusivity) |
+| Exclusive set empty | Existing `empty` state renders |
+| Clear all (`fs-list-element="clear"`) | Native clear resets both conditions; glue then sees no selection and hides the toggle |
+| Per-field clear on `tiers` only | Radios clear natively; glue detects no selection → unchecks + hides toggle |
+| Double render on membership switch (radio change + toggle change) | Accepted — two cheap passes within Finsweet's debounce window |
 
-## Module split + testing
+## Verification points (implementation-time, with fallbacks)
 
-Following the repo's pure-module pattern (`faq-plan.js`,
-`city-visibility-decide.js`):
+1. **URL restore**: confirm `fs-list-showquery` serializes and restores the
+   toggle's dynamic-value condition from a shared link. If restore is
+   unreliable (the checkbox's `fs-list-value` is empty until glue runs), fall
+   back to a hand-rolled `exclusive=1` param (`history.replaceState` +
+   restore-on-load; `syncCityLinks` carries it across cities automatically).
+2. **Deselect affordance**: radios can't be un-selected by re-clicking —
+   confirm the filter UI keeps a per-field clear / "All" option so users can
+   return to "no membership".
+3. **`getFormFieldValue` semantics**: confirm an unchecked toggle yields an
+   inactive condition and a checked one yields its `fs-list-value` (expected
+   from `@finsweet/attributes-utils`, spot-check on the live page).
 
-- **`src/explorer-membership.js`** — pure, no DOM:
-  - parse a `tier`/`tiers` text into normalized value(s);
-  - resolve the selected membership from a list of checked values (dedupe,
-    first-wins);
-  - the exclusive predicate (`cardTier === selected`);
-  - `exclusive=1` param encode/decode.
-- **`tests/explorer-membership.test.mjs`** — framework-free
-  (`node tests/explorer-membership.test.mjs`), covering the predicate, the
-  edge cases above, and param round-tripping.
-- **`src/explorer.js`** — DOM wiring only: single-select listener, toggle
-  binding, wrap attributes, label slot, clear hook, filter-hook narrowing.
+## Testing
 
-Manual verification on the live page (Finsweet + map integration can't be
-unit-tested): select each membership, flip the toggle, verify counts, badges,
-map markers, empty state, URL restore from a shared link, and city-switch
-carry-over.
+Manual verification on the live page (all behavior is Finsweet + DOM glue —
+no pure logic left to unit-test): select each membership, flip the toggle,
+verify counts, badges (toggle never counts), map markers, empty state, clear
+buttons, URL restore from a shared link, city-switch carry-over, and the
+mobile bottom-sheet filter bar.
