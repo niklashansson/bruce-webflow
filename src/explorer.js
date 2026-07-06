@@ -63,6 +63,9 @@ const S = {
   // header on a mobile map (so the inputs never leave their form — no Finsweet
   // desync). The Map toggle sits OUTSIDE this, so it stays put.
   filterBar: '[data-explorer-element="filter-bar"]',
+  // The "Show exclusive to X" switch — a real Finsweet condition input
+  // (fs-list-field="tier" fs-list-operator="equal") inside the filters form.
+  exclusiveToggle: '[data-explorer-element="exclusive-toggle"]',
 };
 
 // The free-text search input — counted for "are filters active?" but never as a
@@ -200,6 +203,47 @@ function reflectFilters(form) {
   }
 }
 
+// ── Exclusive toggle ─────────────────────────────────────────
+// The membership radios (fs-list-field="tiers", operator contain) natively
+// filter to the studios INCLUDED in the selected membership. The exclusive
+// toggle is a real Finsweet condition input (fs-list-field="tier", operator
+// equal) with NO authored fs-list-value: this function keeps that attribute
+// pointed at the selected membership and dispatches a change event so
+// Finsweet re-reads the condition. tier=X implies X ∈ tiers, so the two
+// conditions AND into "exclusive to X" — a strict subset, never a negation.
+// Spec: docs/superpowers/specs/2026-07-06-explorer-membership-filter-design.md
+const MEMBERSHIP_RADIO = 'input[type="radio"][fs-list-field="tiers"]';
+
+function syncExclusiveToggle(form) {
+  const toggle = form.querySelector(S.exclusiveToggle);
+  if (!(toggle instanceof HTMLInputElement)) return;
+
+  const radio = form.querySelector(`${MEMBERSHIP_RADIO}:checked`);
+  const selected =
+    radio?.getAttribute("fs-list-value") ?? radio?.value ?? "";
+
+  // No membership → no reference for "exclusive"; force the switch off via
+  // click (never .checked — that desyncs Finsweet and the Webflow visuals).
+  if (!selected && toggle.checked) toggle.click();
+
+  // Rewrite + re-dispatch only when the value really changed. The dispatched
+  // change re-enters this function through the form's change listener; this
+  // equality check is what terminates that recursion.
+  if (toggle.getAttribute("fs-list-value") !== selected) {
+    toggle.setAttribute("fs-list-value", selected);
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }
+
+  const wrap = form.closest(S.wrap);
+  if (wrap instanceof HTMLElement) {
+    if (selected) wrap.dataset.explorerMembership = selected;
+    else delete wrap.dataset.explorerMembership;
+    wrap.dataset.explorerExclusiveAvailable = selected ? "true" : "false";
+    wrap.dataset.explorerExclusive =
+      selected && toggle.checked ? "true" : "false";
+  }
+}
+
 // Keep the city-switch links (toolbar dropdown + modal + locale copies) in sync
 // with the live filter query, so changing city carries the active filters with
 // it ("Yoga in Gothenburg" → "Yoga in Oslo"). Category/tier are city-agnostic,
@@ -224,7 +268,10 @@ function syncCityLinks() {
 // a direct `change` listener (instant, ahead of Finsweet's 200ms debounce).
 function refreshFilterForms() {
   document.querySelectorAll(S.filtersForm).forEach((form) => {
-    if (form instanceof HTMLFormElement) reflectFilters(form);
+    if (form instanceof HTMLFormElement) {
+      syncExclusiveToggle(form);
+      reflectFilters(form);
+    }
   });
   syncCityLinks();
 }
@@ -240,9 +287,11 @@ function setupFilterForms() {
     form.dataset.explorerFiltersInit = "true";
     form.addEventListener("submit", (event) => event.preventDefault());
     form.addEventListener("change", () => {
+      syncExclusiveToggle(form);
       reflectFilters(form);
       syncCityLinks();
     });
+    syncExclusiveToggle(form);
     reflectFilters(form);
   });
   // Carry any URL-restored filters into the city links on first paint, before
