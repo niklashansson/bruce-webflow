@@ -171,6 +171,9 @@ function reflectFilters(form) {
   let total = 0;
 
   for (const el of form.querySelectorAll("input:checked")) {
+    // The exclusive toggle is a refinement of the membership selection, not a
+    // filter of its own — it must never count into badges or the total.
+    if (el.matches(S.exclusiveToggle)) continue;
     const field = el.getAttribute("fs-list-field");
     if (!field || field === "*") continue;
     const key = `${field} ${el.getAttribute("fs-list-value") ?? el.value}`;
