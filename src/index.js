@@ -10,6 +10,7 @@ import "./city-context.js";
 import "./city-visibility.js";
 import "./city-switcher.js";
 import "./city-links.js";
+import "./clean-link-params.js";
 import "./location.js";
 import "./slider.js";
 import "./tab.js";
