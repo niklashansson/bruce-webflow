@@ -20,9 +20,9 @@ const CITIES = [
 
 // ── resolveActiveCity ────────────────────────────────────────
 check(
-  "lock wins over saved; seeds nothing when saved exists",
+  "lock wins over saved and re-seeds the preference",
   resolveActiveCity({ lock: "sto", param: null, saved: "cph" }, CITIES),
-  { active: "sto", seedPreference: null },
+  { active: "sto", seedPreference: "sto" },
 );
 check(
   "lock with no saved pref → seeds the lock",
