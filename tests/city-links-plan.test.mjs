@@ -104,6 +104,14 @@ check(
   "/terms/se",
 );
 check(
+  "keyed section + empty-string var value → gateway fallback",
+  resolveHref(
+    { section: "terms", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: "stockholm", activeVars: { country: "" } },
+  ),
+  "/terms/se",
+);
+check(
   "keyed section preserves query + hash",
   resolveHref(
     { section: "terms", search: "?ref=footer", hash: "#privacy" },
