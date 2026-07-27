@@ -63,4 +63,69 @@ check(
   "",
 );
 
+// ── resolveHref, keyed by city var ───────────────────────────
+const KEYED_GATEWAYS = { ...GATEWAYS, terms: "/terms/se" };
+const KEYED_LINK_MAP = {
+  ...LINK_MAP,
+  terms: { se: "/terms/se", dk: "/terms/dk", no: "/terms/no" },
+};
+const KEY_BY = { terms: "country" };
+
+check(
+  "keyed section + active city with country → country url",
+  resolveHref(
+    { section: "terms", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: "copenhagen", activeVars: { country: "dk" } },
+  ),
+  "/terms/dk",
+);
+check(
+  "keyed section + neutral → gateway (default country)",
+  resolveHref(
+    { section: "terms", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: null, activeVars: null },
+  ),
+  "/terms/se",
+);
+check(
+  "keyed section + active city missing the var → gateway fallback",
+  resolveHref(
+    { section: "terms", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: "stockholm", activeVars: {} },
+  ),
+  "/terms/se",
+);
+check(
+  "keyed section + var value with no list entry → gateway fallback",
+  resolveHref(
+    { section: "terms", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: "helsinki", activeVars: { country: "fi" } },
+  ),
+  "/terms/se",
+);
+check(
+  "keyed section preserves query + hash",
+  resolveHref(
+    { section: "terms", search: "?ref=footer", hash: "#privacy" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: "oslo", activeVars: { country: "no" } },
+  ),
+  "/terms/no?ref=footer#privacy",
+);
+check(
+  "slug-keyed section ignores keyBy for other sections (regression)",
+  resolveHref(
+    { section: "memberships", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: "oslo", activeVars: { country: "no" } },
+  ),
+  "/memberships/oslo",
+);
+check(
+  "old call shape (no keyBy/activeVars) still resolves slug-keyed sections",
+  resolveHref(
+    { section: "memberships", search: "", hash: "" },
+    { gateways: GATEWAYS, linkMap: LINK_MAP, active: "oslo" },
+  ),
+  "/memberships/oslo",
+);
+
 console.log(`✓ all ${passed} assertions passed`);

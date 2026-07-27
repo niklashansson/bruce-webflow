@@ -30,16 +30,22 @@ export function matchSection(pathname, gateways) {
 }
 
 /**
- * The href to set for a managed link. Falls back to the gateway path when
- * neutral OR when the active city has no page in that section. Query + hash
+ * The href to set for a managed link. The lookup key is normally the active
+ * city slug; a section listed in `keyBy` uses the active city's var of that
+ * name instead (e.g. terms pages keyed by `country`). Falls back to the
+ * gateway path when neutral OR when no entry exists for the key. Query + hash
  * are preserved verbatim.
  *
  * @param {{section: string, search: string, hash: string}} link
- * @param {{gateways: Record<string,string>, linkMap: Record<string,Record<string,string>>, active: string|null}} ctx
+ * @param {{gateways: Record<string,string>, linkMap: Record<string,Record<string,string>>, keyBy?: Record<string,string>, active: string|null, activeVars?: Record<string,string>|null}} ctx
  * @returns {string}
  */
-export function resolveHref({ section, search, hash }, { gateways, linkMap, active }) {
-  const cityUrl = active ? linkMap[section]?.[active] : null;
-  const base = cityUrl ?? gateways[section] ?? "";
-  return base + search + hash;
+export function resolveHref(
+  { section, search, hash },
+  { gateways, linkMap, keyBy, active, activeVars },
+) {
+  const by = keyBy?.[section];
+  const key = by ? (activeVars?.[by] ?? null) : active;
+  const url = key ? linkMap[section]?.[key] : null;
+  return (url ?? gateways[section] ?? "") + search + hash;
 }
