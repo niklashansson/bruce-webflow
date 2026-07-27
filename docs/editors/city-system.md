@@ -15,6 +15,7 @@ every page). Each item carries:
 | `data-city-name` | the city's Name | yes |
 | `data-city-var-phone` | a per-city field (e.g. Phone) | no |
 | `data-city-var-lat` / `data-city-var-lng` | coordinates | no |
+| `data-city-var-country` | the city's Country option (`se`/`dk`/`no`) | for Terms links |
 
 Any `data-city-var-XYZ` becomes a placeholder `{{XYZ}}` you can use in text.
 To add a city, add a Collection item — nothing else.
@@ -61,6 +62,11 @@ none of these always shows.
 Links to a city's Memberships or Studios page resolve automatically — just
 link to `/memberships` or `/studios` as normal and the visitor's city is
 applied for them. No `{{...}}` needed.
+
+Terms links work the same way per **country**: link to the Terms SE page as
+normal, and visitors with a Danish or Norwegian city selected are routed to
+`/terms/dk` / `/terms/no` instead. With no city selected, the link stays on
+Terms SE. (Each city's Country field drives this.)
 
 ## What visitors see before picking a city
 
