@@ -9,8 +9,11 @@
  *
  * Source data (rendered in the global component, every page + locale):
  *   [data-city-gateway="<section>"]                  — anchor; localized gateway path
- *   [data-city-link-list="<section>"]                — Collection List wrapper
- *     [data-city-link-item][data-city-link-key][href] — city slug → localized URL
+ *   [data-city-link-list="<section>"]                — list wrapper (Collection List or static)
+ *     [data-city-link-item][data-city-link-key][href] — key → localized URL
+ *   The key is the city slug, unless the wrapper sets data-city-link-by="<var>"
+ *   — then it is the active city's data-city-var-<var> value (e.g. terms pages
+ *   keyed by country).
  *
  * Opt-out: <a data-city-link-skip> is never rewritten (keeps it pointing at the
  * neutral gateway, e.g. a "Browse all cities" link).
@@ -40,18 +43,22 @@ function readGateways() {
 
 function readLinkMap() {
   /** @type {Record<string,Record<string,string>>} */
-  const out = {};
+  const map = {};
+  /** @type {Record<string,string>} */
+  const keyBy = {};
   document.querySelectorAll("[data-city-link-list]").forEach((list) => {
     const section = list.getAttribute("data-city-link-list")?.trim();
     if (!section) return;
-    const map = (out[section] ||= {});
+    const by = list.getAttribute("data-city-link-by")?.trim();
+    if (by) keyBy[section] = by;
+    const m = (map[section] ||= {});
     list.querySelectorAll("[data-city-link-item]").forEach((a) => {
       const key = a.getAttribute("data-city-link-key")?.trim();
       const href = a.getAttribute("href");
-      if (key && href) map[key] = new URL(href, location.origin).pathname;
+      if (key && href) m[key] = new URL(href, location.origin).pathname;
     });
   });
-  return out;
+  return { map, keyBy };
 }
 
 // ── Apply ────────────────────────────────────────────────────
@@ -59,7 +66,11 @@ function readLinkMap() {
 function apply(active) {
   const gateways = readGateways();
   if (Object.keys(gateways).length === 0) return; // sources not rendered yet
-  const linkMap = readLinkMap();
+  const { map: linkMap, keyBy } = readLinkMap();
+  const activeCity = active
+    ? /** @type {any} */ (window).bruce?.city?.all?.()?.find((c) => c.slug === active)
+    : null;
+  const activeVars = activeCity?.vars ?? null;
 
   document.querySelectorAll("a[href]").forEach((el) => {
     const a = /** @type {HTMLAnchorElement} */ (el);
@@ -81,7 +92,7 @@ function apply(active) {
       managed.set(a, entry);
     }
 
-    a.setAttribute("href", resolveHref(entry, { gateways, linkMap, active }));
+    a.setAttribute("href", resolveHref(entry, { gateways, linkMap, keyBy, active, activeVars }));
   });
 }
 
