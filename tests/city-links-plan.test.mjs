@@ -120,6 +120,30 @@ check(
   "/terms/no?ref=footer#privacy",
 );
 check(
+  "keyed section + uppercase var value matches lowercase list key (synced SE vs terms se)",
+  resolveHref(
+    { section: "terms", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: KEYED_LINK_MAP, keyBy: KEY_BY, active: "copenhagen", activeVars: { country: "DK" } },
+  ),
+  "/terms/dk",
+);
+check(
+  "keyed section + lowercase var value matches uppercase list key",
+  resolveHref(
+    { section: "terms", search: "", hash: "" },
+    { gateways: KEYED_GATEWAYS, linkMap: { ...KEYED_LINK_MAP, terms: { SE: "/terms/se", NO: "/terms/no" } }, keyBy: KEY_BY, active: "oslo", activeVars: { country: "no" } },
+  ),
+  "/terms/no",
+);
+check(
+  "slug lookup is case-insensitive too",
+  resolveHref(
+    { section: "memberships", search: "", hash: "" },
+    { gateways: GATEWAYS, linkMap: LINK_MAP, active: "Oslo" },
+  ),
+  "/memberships/oslo",
+);
+check(
   "slug-keyed section ignores keyBy for other sections (regression)",
   resolveHref(
     { section: "memberships", search: "", hash: "" },

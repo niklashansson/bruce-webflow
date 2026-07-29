@@ -30,11 +30,31 @@ export function matchSection(pathname, gateways) {
 }
 
 /**
+ * Case-insensitive lookup in a key → url map. Editors bind keys and city vars
+ * from different collections whose codes differ in casing (synced country_code
+ * is uppercase, terms keys are lowercase slugs) — a miss here would silently
+ * fall back to the gateway, so casing must never matter.
+ *
+ * @param {Record<string,string>|undefined} m
+ * @param {string} key
+ * @returns {string|null}
+ */
+function lookup(m, key) {
+  if (!m) return null;
+  if (m[key] != null) return m[key];
+  const want = key.toLowerCase();
+  for (const k of Object.keys(m)) {
+    if (k.toLowerCase() === want) return m[k];
+  }
+  return null;
+}
+
+/**
  * The href to set for a managed link. The lookup key is normally the active
  * city slug; a section listed in `keyBy` uses the active city's var of that
- * name instead (e.g. terms pages keyed by `country`). Falls back to the
- * gateway path when neutral OR when no entry exists for the key. Query + hash
- * are preserved verbatim.
+ * name instead (e.g. terms pages keyed by `country`). Key matching is
+ * case-insensitive. Falls back to the gateway path when neutral OR when no
+ * entry exists for the key. Query + hash are preserved verbatim.
  *
  * @param {{section: string, search: string, hash: string}} link
  * @param {{gateways: Record<string,string>, linkMap: Record<string,Record<string,string>>, keyBy?: Record<string,string>, active: string|null, activeVars?: Record<string,string>|null}} ctx
@@ -46,6 +66,6 @@ export function resolveHref(
 ) {
   const by = keyBy?.[section];
   const key = by ? (activeVars?.[by] ?? null) : active;
-  const url = key ? linkMap[section]?.[key] : null;
+  const url = key ? lookup(linkMap[section], key) : null;
   return (url ?? gateways[section] ?? "") + search + hash;
 }
