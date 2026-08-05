@@ -238,13 +238,32 @@ function stopTracking() {
 
 // Watches a settled panel for content-driven size changes — Finsweet shows and
 // hides facet options live (fs-list-emptyfacet="hide"), so the natural height
-// moves while the panel is open and the clamp has to follow. Only attached
-// after the open tween finishes; during the tween the height is animating and
-// every frame would fire.
+// can move while the panel is open and the clamp has to follow.
+//
+// Observes the panel's ELEMENT CHILDREN, not the panel itself. The panel's
+// own border box is capped by the inline `max-height` reposition() writes, so
+// once it's clamped, growth past the clamp changes nothing about that box —
+// the observer would never fire for exactly the case it exists to catch.
+// Children aren't capped by their parent's max-height, so their boxes keep
+// reporting real size changes whether the panel is clamped or not. Falls back
+// to observing `entry.content` itself only when there are no element children
+// (a text-only panel), so there's still some coverage.
+//
+// Whichever child fired, reposition() (invoked via onAnchorMove) re-measures
+// the panel's natural height itself (content.scrollHeight), so it doesn't
+// matter which descendant changed — the fix is at the read, not the watch.
+//
+// Only attached after the open tween finishes; during the tween the height is
+// animating and every frame would fire.
 function observePanel(entry) {
   if (!CAN_PORTAL || panelObserver) return;
   panelObserver = new ResizeObserver(() => onAnchorMove());
-  panelObserver.observe(entry.content);
+  const children = entry.content.children;
+  if (children.length) {
+    for (const child of children) panelObserver.observe(child);
+  } else {
+    panelObserver.observe(entry.content);
+  }
 }
 
 const allClosed = () => activeDropdown === null;
@@ -303,9 +322,13 @@ export function initDropdown() {
 
     const isOpen = () => toggle.getAttribute("aria-expanded") === "true";
 
-    // The panel's unconstrained size, measured once per open while it is still
-    // in normal flow. Repositioning reuses it — re-measuring a clamped,
-    // scrolling panel would feed back on itself.
+    // The panel's unconstrained size. Width is measured once per open, while
+    // the panel is still in normal flow, and then pinned inline — it never
+    // changes after that (see portalOpen()). Height is measured once at open
+    // too, but reposition() below refreshes it on every later call: content
+    // can change height while the panel stays open (Finsweet toggling
+    // fs-list-emptyfacet="hide" is the motivating case), and the clamp has to
+    // track that, not just the size at open time.
     let naturalSize = { width: 0, height: 0 };
     // Whether the last placement had to clamp. Decides the resting overflow.
     let clamped = false;
@@ -315,6 +338,18 @@ export function initDropdown() {
     // target and max-height clamps the result if the space shrank underneath.
     const reposition = () => {
       if (!CAN_PORTAL || !isOpen()) return;
+      // Re-measure the natural height from scrollHeight before placing.
+      // scrollHeight reports the full content height even while the panel is
+      // currently clamped and scrolling (unlike offsetHeight, which would
+      // read the capped box back) — so this is the correct way to notice
+      // content that grew or shrank since the last call, without re-running
+      // the expensive display:block/height:auto remeasure portalOpen() does.
+      // Guarded on `!currentAnimation`: mid-tween, `content`'s height is the
+      // animation's own transient value, not the settled natural size, so
+      // reading it here would feed a wrong number into place(). Width is
+      // deliberately left untouched — it's pinned inline on purpose (see
+      // naturalSize's declaration above) and never changes after open.
+      if (!currentAnimation) naturalSize.height = content.scrollHeight;
       const { placement, top, left, maxHeight } = place({
         anchor: toggle.getBoundingClientRect(),
         panel: naturalSize,
