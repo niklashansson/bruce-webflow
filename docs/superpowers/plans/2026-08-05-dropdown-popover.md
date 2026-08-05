@@ -302,30 +302,44 @@ const CAN_PORTAL = "showPopover" in HTMLElement.prototype;
 const GAP_PX = 8; // toggle → panel
 const INSET_PX = 8; // panel → viewport edge
 
-// showPopover() brings UA styles with it (inset: 0, margin: auto, a border,
-// padding, fit-content sizing). This neutralises them. It lives here rather
-// than in a Webflow embed because it's a functional requirement of this
-// script, not a design token — the two must not drift apart. `position: fixed`
-// is restated rather than inherited because Webflow authors these panels as
-// `position: absolute`; the selector's specificity (0,2,0) beats a Webflow
-// class (0,1,0), so no !important is needed.
+// The popover UA sheet brings position: fixed, inset: 0, margin: auto,
+// fit-content sizing, a border and padding. This neutralises it. It lives here
+// rather than in a Webflow embed because it's a functional requirement of this
+// script, not a design token — the two must not drift apart.
+//
+// Two rules, because they have different jobs. The UA's [popover] rule is NOT
+// gated on :popover-open — it applies the moment the attribute is set, which
+// includes portalOpen()'s measurement window — so the neutralising half must
+// be ungated too. It also sits at zero specificity via :where(): author origin
+// already beats the UA origin, and staying at (0,0,0) means the site's own
+// Webflow classes still win, which is the point. The structural half applies
+// only while open, and restates display: block to match what the pre-portal
+// code forced on every open.
 let popoverStylesInjected = false;
 function ensurePopoverStyles() {
   if (popoverStylesInjected || !CAN_PORTAL) return;
   popoverStylesInjected = true;
   const style = document.createElement("style");
   style.textContent = `
-    [data-dropdown-element="content"]:popover-open {
-      position: fixed;
-      margin: 0;
-      border: 0;
-      padding: 0;
-      background: transparent;
-      color: inherit;
+    :where([data-dropdown-element="content"][popover]) {
+      position: static;
       inset: auto;
       width: auto;
       height: auto;
+      margin: 0;
+      border: 0;
+      padding: 0;
       overflow: visible;
+      background: transparent;
+      color: inherit;
+    }
+    [data-dropdown-element="content"]:popover-open {
+      position: fixed;
+      inset: auto;
+      margin: 0;
+      width: auto;
+      height: auto;
+      display: block;
     }
   `;
   document.head.appendChild(style);
@@ -788,4 +802,5 @@ then purge the jsDelivr edge cache for the `@main` bundles at <https://purge.jsd
 - **`src/dropdown.js` is ~290 lines and stays that way.** This is an additive change; nothing existing is being restructured.
 - **Read the whole `open()` and `close()` pair before editing either.** They mirror each other, and several edits in Tasks 2 and 3 touch both.
 - **`content.scrollHeight` is the right natural-height read even on a clamped, scrolling panel** — `scrollHeight` reports full content height regardless of clipping. That is why `observePanel`'s callback needs no un-clamping dance.
-- **Do not add `!important` to the injected stylesheet.** If a rule appears not to apply, check specificity first: `[data-dropdown-element="content"]:popover-open` is (0,2,0) and beats any single Webflow class.
+- **Do not add `!important` to the injected stylesheet.** The neutralising rule deliberately sits at zero specificity via `:where()` so the site's own Webflow classes win — that is a feature, not a bug to paper over. Only the structural half (`position`, `inset`, `margin`, `display` while open) is meant to override author styles.
+- **The UA `[popover]` rule is not gated on `:popover-open`.** It applies from the moment the attribute is set. Any reset that must hold during `portalOpen()`'s measurement window has to be ungated too.

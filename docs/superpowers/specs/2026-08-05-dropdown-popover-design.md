@@ -216,19 +216,42 @@ while a panel is up; `innerHeight` is wrong in that state.
 auto`, and its own colours. `dropdown.js` injects a small stylesheet once on
 first init to neutralise them:
 
+Crucially, the UA's `[popover]` rule is **not** gated on `:popover-open` — it
+applies from the moment the attribute is set, which includes the measurement
+window. And the reset must beat the UA sheet without also beating the site's
+own styling. Those two facts split the reset in half:
+
 ```css
-[data-dropdown-element="content"]:popover-open {
-  position: fixed;
-  margin: 0; border: 0; padding: 0;
+/* Neutralise the UA sheet. Author origin already outranks the UA origin, so
+   no specificity is needed — and :where() pins this at (0,0,0) so Webflow's
+   own classes still win, which is the entire point. Ungated on
+   :popover-open, so it also governs the measurement window. */
+:where([data-dropdown-element="content"][popover]) {
+  position: static; inset: auto; width: auto; height: auto;
+  margin: 0; border: 0; padding: 0; overflow: visible;
   background: transparent; color: inherit;
-  inset: auto; width: auto; height: auto; overflow: visible;
+}
+
+/* Structural, and only while open. `display: block` matches what the
+   pre-portal code forced on every open, so a panel authored `display: none`
+   still opens. */
+[data-dropdown-element="content"]:popover-open {
+  position: fixed; inset: auto; margin: 0;
+  width: auto; height: auto; display: block;
 }
 ```
 
-`position: fixed` is restated rather than inherited from the UA sheet, because
-Webflow authors these panels as `position: absolute`. The selector's
-specificity (0,2,0 — attribute plus pseudo-class) beats a Webflow class
-(0,1,0), so the reset wins without `!important`.
+**Corrected 2026-08-05.** This section originally specified one rule at
+`[data-dropdown-element="content"]:popover-open`, justified by its specificity
+(0,2,0) beating a Webflow class (0,1,0). That reasoning was wrong twice over.
+Specificity was never needed to beat the UA sheet — origin already does that —
+and cranking it meant the reset also stripped the panel's authored background,
+padding, border and clipping. Separately, gating the reset on `:popover-open`
+left the UA's `position: fixed; width: fit-content` in force during
+measurement, so `portalOpen()` measured an already-fixed, out-of-flow panel;
+a panel with no authored width measured 22px instead of 400px, and that value
+was then pinned for the whole open. Both were reproduced in Chrome before this
+correction.
 
 This is a functional requirement of the script, not a design token, so it
 lives with the script rather than in a Webflow embed where the two could drift
