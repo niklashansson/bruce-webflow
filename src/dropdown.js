@@ -332,6 +332,41 @@ export function initDropdown() {
     let naturalSize = { width: 0, height: 0 };
     // Whether the last placement had to clamp. Decides the resting overflow.
     let clamped = false;
+    // Whether THIS open has EVER clamped. Reset to false at the top of each
+    // open(); once flipped true, it never reverts until the panel closes.
+    //
+    // Why this exists: re-measuring `naturalSize.height` from `scrollHeight`
+    // on every reposition() (above) is correct and necessary, but it opens a
+    // feedback path on platforms with space-consuming ("classic") scrollbars
+    // for any panel containing a WIDTH-driven child (an `aspect-ratio` box,
+    // an `<img width="100%">`, a video embed): clamp -> `overflow: auto`
+    // shows a scrollbar -> child's available width shrinks by the scrollbar's
+    // width -> child gets shorter -> new scrollHeight now fits under
+    // max-height -> unclamp -> scrollbar goes away -> child widens -> child
+    // gets taller again -> clamps again -> forever, once per animation frame,
+    // with no browser-visible "ResizeObserver loop" warning (the callback
+    // defers to rAF, so Chrome never attributes it to the observer).
+    //
+    // The fix is to stop the scrollbar itself from ever coming and going
+    // once it's appeared once: after the first clamp this open, the resting
+    // overflow forces `scroll` instead of `auto` (see restingOverflow()
+    // below) even while unclamped, so the gutter — and therefore
+    // content.clientWidth, and therefore the width-driven child's height —
+    // stays constant for the rest of the open. That converges by
+    // construction (the feedback path is severed) rather than by tuning a
+    // numeric hysteresis margin. The trade is a reserved-but-unused
+    // scrollbar track if the panel later shrinks back below the clamp —
+    // a visible but minor cost, and worth it for a fix that can't
+    // re-oscillate under some other geometry.
+    let gutterReserved = false;
+
+    // Single formula for the resting (non-tween) `overflow` value. Called
+    // from both reposition() (every post-settle recompute) and open()'s
+    // tween-completion callback (the very first write, before any
+    // post-settle reposition() has run) so the two call sites can't drift
+    // apart into different rules.
+    const restingOverflow = () =>
+      clamped ? "auto" : gutterReserved ? "scroll" : "";
 
     // Writes geometry ONLY — never `height`. A reposition landing mid-tween
     // therefore can't fight the animation: the tween finishes to its original
@@ -365,17 +400,19 @@ export function initDropdown() {
       wrap.setAttribute("data-dropdown-placement", placement);
       content.setAttribute("data-dropdown-placement", placement);
       clamped = maxHeight < naturalSize.height;
-      // Keep the RESTING overflow in sync with `clamped` even after the panel
-      // has settled open. reposition() is the only place `clamped` can change
-      // post-settle (the tracking loop calls it on scroll/resize/sheet-drag,
-      // and the ResizeObserver calls it on content-driven height changes), so
-      // it's the single correct place to react to that change too — anywhere
-      // else would mean re-deriving "did clamped change" from scratch.
+      if (clamped) gutterReserved = true;
+      // Keep the RESTING overflow in sync with `clamped` (and, once latched,
+      // `gutterReserved`) even after the panel has settled open. reposition()
+      // is the only place either can change post-settle (the tracking loop
+      // calls it on scroll/resize/sheet-drag, and the ResizeObserver calls it
+      // on content-driven height changes), so it's the single correct place
+      // to react to that change too — anywhere else would mean re-deriving
+      // "did clamped change" from scratch.
       // Guarded on `!currentAnimation` so this never fights animateTo's own
       // `overflow: hidden`, which owns the property for the ~200ms tween; the
       // tween's onDone callback sets the resting value once currentAnimation
       // is already null, so there's no gap where both would try to write it.
-      if (!currentAnimation) content.style.overflow = clamped ? "auto" : "";
+      if (!currentAnimation) content.style.overflow = restingOverflow();
       return maxHeight;
     };
 
@@ -488,6 +525,10 @@ export function initDropdown() {
 
     const open = () => {
       if (isOpen()) return;
+      // Fresh open, fresh gutter-freeze latch — a panel that clamped on a
+      // previous open must not start this one with the gutter already
+      // reserved.
+      gutterReserved = false;
       // Only one dropdown open at a time — sidesteps z-index conflicts when
       // two open menus would otherwise stack by document order.
       if (activeDropdown && activeDropdown.wrap !== wrap)
@@ -531,8 +572,10 @@ export function initDropdown() {
         () => {
           clearInlineState();
           // A clamped panel keeps scrolling internally. An unclamped one lets
-          // descendants (focus rings, submenus) overflow, as before.
-          content.style.overflow = clamped ? "auto" : "";
+          // descendants (focus rings, submenus) overflow, as before — unless
+          // this open has clamped before, in which case restingOverflow()
+          // keeps the gutter reserved (see gutterReserved's declaration).
+          content.style.overflow = restingOverflow();
           if (activeDropdown?.content === content) observePanel(activeDropdown);
         },
       );
