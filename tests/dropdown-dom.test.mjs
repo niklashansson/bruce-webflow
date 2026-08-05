@@ -483,7 +483,7 @@ try {
     await page.evaluate((ms) => window.__sleep(ms), OPEN_SETTLE_MS);
     const before = await page.evaluate(() => {
       const c = document.querySelector(".grow");
-      return { top: c.style.top, maxHeight: c.style.maxHeight };
+      return { top: c.style.top, height: c.offsetHeight };
     });
     // Shrink the observed child, then let the observer -> rAF -> reposition
     // chain run.
@@ -498,24 +498,30 @@ try {
       const cr = c.getBoundingClientRect();
       return {
         top: c.style.top,
+        // The panel never clamps here (150px of content, 484px above the
+        // anchor), so it must carry NO inline max-height at all — it tracks
+        // the shrink through its own natural height. See assertion 9.
         maxHeight: c.style.maxHeight,
+        height: c.offsetHeight,
         gapAboveAnchor: Math.round(t.getBoundingClientRect().top - cr.bottom),
       };
     });
     check(
-      `5. shrinking content re-places a settled top panel (top ${before.top} -> ${after.top}, max-height ${before.maxHeight} -> ${after.maxHeight})`,
+      `5. shrinking content re-places a settled top panel (top ${before.top} -> ${after.top}, height ${before.height} -> ${after.height})`,
       {
         topMoved: before.top !== after.top,
-        maxHeightMoved: before.maxHeight !== after.maxHeight,
+        heightMoved: before.height !== after.height,
         top: after.top,
         maxHeight: after.maxHeight,
+        height: after.height,
         gapAboveAnchor: after.gapAboveAnchor,
       },
       {
         topMoved: true,
-        maxHeightMoved: true,
+        heightMoved: true,
         top: "342px",
-        maxHeight: "150px",
+        maxHeight: "",
+        height: 150,
         gapAboveAnchor: 8,
       },
     );
@@ -713,6 +719,95 @@ try {
     );
     await page.close();
   }
+
+  // ── 9. An unclamped panel settles at its NATURAL height ────
+  // Final whole-branch review, Critical. `max-height` was written on every
+  // reposition() from `content.scrollHeight` — a PADDING-box number — while
+  // Webflow's global `box-sizing: border-box` makes `max-height` cap the
+  // BORDER box. So every bordered panel settled short by its own border
+  // widths, on every open, on the common (unclamped) path where the
+  // pre-portal code wrote no max-height at all. And writing max-height there
+  // at all also stomped any authored one.
+  {
+    const page = await newPage({ viewport: { width: 500, height: 600 } });
+    const item = '<div class="item"><a href="#">i</a></div>';
+    await page.evaluate(
+      (css, html) => window.__mount(css, html),
+      `.hi { position: fixed; left: 20px; }
+       .hi button { display: block; height: 30px; width: 120px; }
+       .item { height: 30px; }
+       /* 4 * 30 content + 2 * 10 padding + 2 * 6 border = 152px border box.
+          scrollHeight alone reports 140 — the 12px shortfall the review
+          measured. */
+       .bordered { width: 220px; border: 6px solid rgb(30, 30, 30); padding: 10px; }
+       /* 5 * 30 = 150px of content the author has deliberately capped. */
+       .capped { width: 220px; max-height: 90px; }`,
+      `<div data-dropdown-element="wrap" class="hi" style="top: 20px">
+         <button data-dropdown-element="toggle">bordered</button>
+         <div data-dropdown-element="content" class="bordered">${item.repeat(4)}</div>
+       </div>
+       <div data-dropdown-element="wrap" class="hi" style="top: 260px">
+         <button data-dropdown-element="toggle">capped</button>
+         <div data-dropdown-element="content" class="capped">${item.repeat(5)}</div>
+       </div>`,
+    );
+
+    // Ground truth: the same markup, same classes, laid out in normal flow
+    // with nothing this module wrote on it.
+    const naturalHeight = await page.evaluate(() => {
+      const probe = document.querySelector(".bordered").cloneNode(true);
+      probe.removeAttribute("popover");
+      probe.removeAttribute("id");
+      probe.style.cssText = "position:absolute;visibility:hidden;top:0;left:0;";
+      document.body.appendChild(probe);
+      const h = probe.offsetHeight;
+      probe.remove();
+      return h;
+    });
+
+    await page.evaluate(() => document.querySelectorAll('[data-dropdown-element="toggle"]')[0].click());
+    await page.evaluate((ms) => window.__sleep(ms), OPEN_SETTLE_MS);
+    const bordered = await page.evaluate(() => {
+      const c = document.querySelector(".bordered");
+      return {
+        height: c.offsetHeight,
+        inlineMaxHeight: c.style.maxHeight,
+        placement: c.getAttribute("data-dropdown-placement"),
+        scrolls: c.scrollHeight > c.clientHeight,
+      };
+    });
+    check(
+      `9a. an unclamped bordered panel settles at its natural border-box height (natural ${naturalHeight}px, settled ${bordered.height}px)`,
+      { ...bordered, matchesNatural: bordered.height === naturalHeight },
+      {
+        height: 152,
+        inlineMaxHeight: "",
+        placement: "bottom",
+        scrolls: false,
+        matchesNatural: true,
+      },
+    );
+    await page.evaluate(() => document.querySelectorAll('[data-dropdown-element="toggle"]')[0].click());
+    await page.evaluate((ms) => window.__sleep(ms), OPEN_SETTLE_MS);
+
+    await page.evaluate(() => document.querySelectorAll('[data-dropdown-element="toggle"]')[1].click());
+    await page.evaluate((ms) => window.__sleep(ms), OPEN_SETTLE_MS);
+    const capped = await page.evaluate(() => {
+      const c = document.querySelector(".capped");
+      return {
+        height: c.offsetHeight,
+        inlineMaxHeight: c.style.maxHeight,
+        computedMaxHeight: getComputedStyle(c).maxHeight,
+      };
+    });
+    check(
+      "9b. an authored max-height survives an open that does not need to clamp",
+      capped,
+      { height: 90, inlineMaxHeight: "", computedMaxHeight: "90px" },
+    );
+    await page.close();
+  }
+
 } finally {
   await browser.close();
   server.close();

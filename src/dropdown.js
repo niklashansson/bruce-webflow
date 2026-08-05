@@ -241,8 +241,9 @@ function stopTracking() {
 // can move while the panel is open and the clamp has to follow.
 //
 // Observes the panel's ELEMENT CHILDREN, not the panel itself. The panel's
-// own border box is capped by the inline `max-height` reposition() writes, so
-// once it's clamped, growth past the clamp changes nothing about that box —
+// own border box is capped by the inline `max-height` reposition() writes
+// whenever it clamps, so once it's clamped, growth past the clamp changes
+// nothing about that box —
 // the observer would never fire for exactly the case it exists to catch.
 // Children aren't capped by their parent's max-height, so their boxes keep
 // reporting real size changes whether the panel is clamped or not. Falls back
@@ -330,6 +331,26 @@ export function initDropdown() {
     // fs-list-emptyfacet="hide" is the motivating case), and the clamp has to
     // track that, not just the size at open time.
     let naturalSize = { width: 0, height: 0 };
+    // Border box minus padding box: the panel's own top+bottom borders, plus a
+    // horizontal scrollbar's height if the AUTHORED overflow already reserves
+    // one. Captured once per open by portalOpen(), while the panel is still
+    // unconstrained, and added to `scrollHeight` by reposition() to turn a
+    // padding-box read into the border-box number place() and `max-height`
+    // both work in (Webflow sets `box-sizing: border-box` globally).
+    //
+    // It is deliberately NOT re-read on every reposition(), even though
+    // `content.offsetHeight - content.clientHeight` would be the live value:
+    // that difference includes the horizontal scrollbar, whose presence is a
+    // CLAMP SIDE EFFECT. Measured in Chrome on a classic-scrollbar panel,
+    // 220px of natural content in a 220px-wide box:
+    //   unclamped + `overflow: scroll` (the gutterReserved resting state) →
+    //     both bars reserved, delta 15, scrollHeight 205 → natural 220
+    //   clamped + `overflow: auto` (no horizontal overflow) →
+    //     delta 0, scrollHeight 205 → natural 205
+    // Any available space between those two numbers would clamp, unclamp,
+    // clamp… once per frame — the very loop gutterReserved exists to sever,
+    // reopened on the other axis. A value frozen at measure time can't.
+    let borderDelta = 0;
     // Whether the last placement had to clamp. Decides the resting overflow.
     let clamped = false;
     // Whether THIS open has EVER clamped. Reset to false at the top of each
@@ -379,12 +400,15 @@ export function initDropdown() {
       // read the capped box back) — so this is the correct way to notice
       // content that grew or shrank since the last call, without re-running
       // the expensive display:block/height:auto remeasure portalOpen() does.
+      // It is a PADDING-box number though, so `borderDelta` converts it to the
+      // border box that place() reasons in and that `max-height` caps.
       // Guarded on `!currentAnimation`: mid-tween, `content`'s height is the
       // animation's own transient value, not the settled natural size, so
       // reading it here would feed a wrong number into place(). Width is
       // deliberately left untouched — it's pinned inline on purpose (see
       // naturalSize's declaration above) and never changes after open.
-      if (!currentAnimation) naturalSize.height = content.scrollHeight;
+      if (!currentAnimation)
+        naturalSize.height = content.scrollHeight + borderDelta;
       const { placement, top, left, maxHeight } = place({
         anchor: toggle.getBoundingClientRect(),
         panel: naturalSize,
@@ -394,12 +418,25 @@ export function initDropdown() {
       });
       content.style.top = `${top}px`;
       content.style.left = `${left}px`;
-      content.style.maxHeight = `${maxHeight}px`;
       // Anchor the scale/slide at the toggle, whichever side we landed on.
       content.style.transformOrigin = placement === "bottom" ? "top" : "bottom";
       wrap.setAttribute("data-dropdown-placement", placement);
       content.setAttribute("data-dropdown-placement", placement);
       clamped = maxHeight < naturalSize.height;
+      // Write `max-height` ONLY when it actually clamps, and clear it
+      // otherwise. Two reasons, both about the unclamped path — the common
+      // one, on every open, on every portal browser:
+      //   - Pre-portal there was no max-height at all. Writing one caps the
+      //     panel at a number we computed, so any measurement error shows up
+      //     as a permanently short panel. Clearing it lets layout decide.
+      //   - An authored `max-height` on the panel's own Webflow class would
+      //     otherwise be overridden on every open, which breaks the
+      //     docstring's "style with whatever classes you want" promise the
+      //     same way the old :popover-open reset did.
+      // The clamped write still wins over an authored max-height, on purpose:
+      // there genuinely isn't room, and scrolling inside the panel beats
+      // spilling out of the viewport.
+      content.style.maxHeight = clamped ? `${maxHeight}px` : "";
       if (clamped) gutterReserved = true;
       // Keep the RESTING overflow in sync with `clamped` (and, once latched,
       // `gutterReserved`) even after the panel has settled open. reposition()
@@ -428,10 +465,15 @@ export function initDropdown() {
       content.style.display = "block";
       content.style.height = "auto";
       content.style.maxHeight = "none";
+      // offsetHeight, not scrollHeight: `max-height: none` means nothing is
+      // overflowing, so this IS the natural size — and it is the border box,
+      // which is the unit place() compares against viewport space and the unit
+      // an eventual `max-height` caps.
       naturalSize = {
         width: content.offsetWidth,
-        height: content.scrollHeight,
+        height: content.offsetHeight,
       };
+      borderDelta = content.offsetHeight - content.clientHeight;
 
       // Clearing inline display hands visibility back to the UA's
       // [popover]:not(:popover-open) rule, so showPopover() takes effect.
