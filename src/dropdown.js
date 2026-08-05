@@ -62,29 +62,52 @@ const GAP_PX = 8; // toggle → panel
 const INSET_PX = 8; // panel → viewport edge
 
 // showPopover() brings UA styles with it (inset: 0, margin: auto, a border,
-// padding, fit-content sizing). This neutralises them. It lives here rather
-// than in a Webflow embed because it's a functional requirement of this
-// script, not a design token — the two must not drift apart. `position: fixed`
-// is restated rather than inherited because Webflow authors these panels as
-// `position: absolute`; the selector's specificity (0,2,0) beats a Webflow
-// class (0,1,0), so no !important is needed.
+// padding, fit-content sizing) via the UA stylesheet's [popover] rule, which
+// applies the moment popover="manual" is set — not gated on :popover-open,
+// so it's live during measurement too. It lives here rather than in a
+// Webflow embed because it's a functional requirement of this script, not a
+// design token — the two must not drift apart.
+//
+// Two rules, two jobs:
+//   - The neutralising rule undoes the UA sheet. Author origin already beats
+//     the UA origin, so no specificity is needed — wrapping the selector in
+//     :where() keeps it at (0,0,0) so the site's own Webflow classes still
+//     win. This is what lets the docstring's "style with whatever classes
+//     you want" promise hold: the panel's authored background, padding,
+//     border and overflow survive being portalled.
+//   - The structural rule only applies while the popover is actually open,
+//     and only sets what genuinely must differ from the UA default:
+//     position: fixed (Webflow authors these panels as position: absolute)
+//     and display: block (parity with the pre-portal code, which always
+//     forced display: block on open — otherwise an authored display: none
+//     panel would open invisibly, since :popover-open matching doesn't
+//     imply visible).
 let popoverStylesInjected = false;
 function ensurePopoverStyles() {
   if (popoverStylesInjected || !CAN_PORTAL) return;
   popoverStylesInjected = true;
   const style = document.createElement("style");
   style.textContent = `
-    [data-dropdown-element="content"]:popover-open {
-      position: fixed;
-      margin: 0;
-      border: 0;
-      padding: 0;
-      background: transparent;
-      color: inherit;
+    :where([data-dropdown-element="content"][popover]) {
+      position: static;
       inset: auto;
       width: auto;
       height: auto;
+      margin: 0;
+      border: 0;
+      padding: 0;
       overflow: visible;
+      background: transparent;
+      color: inherit;
+    }
+
+    [data-dropdown-element="content"]:popover-open {
+      position: fixed;
+      inset: auto;
+      margin: 0;
+      width: auto;
+      height: auto;
+      display: block;
     }
   `;
   document.head.appendChild(style);
