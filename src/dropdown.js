@@ -25,6 +25,7 @@
  */
 
 import { attrBool } from "./utils.js";
+import { place } from "./dropdown-place.js";
 
 const A = {
   wrap: '[data-dropdown-element="wrap"]',
@@ -47,6 +48,58 @@ const CLOSED_TRANSFORM = `translateY(${TRANSLATE_CLOSED_PX}px) scale(${SCALE_CLO
 const OPEN_OPACITY = "1";
 const OPEN_TRANSFORM = "translateY(0px) scale(1)";
 
+// ── Top-layer portal ─────────────────────────────────────────
+// Panels open inside clipping ancestors — most painfully the mobile bottom
+// sheet, whose shadow-DOM header is a scroll box (overflow-x: scroll forces
+// overflow-y to auto) and whose chip row is another one. The top layer ignores
+// every ancestor's overflow, clip, transform and z-index, so showPopover()
+// sidesteps all of them at once. It also means ancestor transforms don't apply
+// to the panel, which is why a plain getBoundingClientRect() on the toggle is
+// the correct anchor even mid-sheet-animation.
+const CAN_PORTAL = "showPopover" in HTMLElement.prototype;
+
+const GAP_PX = 8; // toggle → panel
+const INSET_PX = 8; // panel → viewport edge
+
+// showPopover() brings UA styles with it (inset: 0, margin: auto, a border,
+// padding, fit-content sizing). This neutralises them. It lives here rather
+// than in a Webflow embed because it's a functional requirement of this
+// script, not a design token — the two must not drift apart. `position: fixed`
+// is restated rather than inherited because Webflow authors these panels as
+// `position: absolute`; the selector's specificity (0,2,0) beats a Webflow
+// class (0,1,0), so no !important is needed.
+let popoverStylesInjected = false;
+function ensurePopoverStyles() {
+  if (popoverStylesInjected || !CAN_PORTAL) return;
+  popoverStylesInjected = true;
+  const style = document.createElement("style");
+  style.textContent = `
+    [data-dropdown-element="content"]:popover-open {
+      position: fixed;
+      margin: 0;
+      border: 0;
+      padding: 0;
+      background: transparent;
+      color: inherit;
+      inset: auto;
+      width: auto;
+      height: auto;
+      overflow: visible;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// The visible band in client coordinates. visualViewport is the honest source
+// on mobile: the filter bar contains a search input, so the soft keyboard can
+// be open while a panel is up, and innerHeight does not shrink for it.
+function viewportBox() {
+  const vv = window.visualViewport;
+  if (vv)
+    return { top: vv.offsetTop, left: vv.offsetLeft, width: vv.width, height: vv.height };
+  return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight };
+}
+
 // Dynamic stacking — each open bumps the wrap above any already-animating
 // peers so the newly-opening dropdown always sits on top of the one still
 // closing underneath it. Counter resets to 0 when every dropdown is closed.
@@ -54,7 +107,14 @@ const Z_BASE = 1000;
 let zCounter = 0;
 
 /**
- * @typedef {{ wrap: HTMLElement, toggle: HTMLElement, close: () => void, focusableItems: HTMLElement[] }} ActiveDropdown
+ * @typedef {{
+ *   wrap: HTMLElement,
+ *   toggle: HTMLElement,
+ *   content: HTMLElement,
+ *   close: () => void,
+ *   reposition: () => number | undefined,
+ *   focusableItems: HTMLElement[],
+ * }} ActiveDropdown
  */
 
 // Only one dropdown can be open at a time, so a single reference is enough —
@@ -107,6 +167,7 @@ const allClosed = () => activeDropdown === null;
 /** Initialize all dropdown wraps. Safe to call multiple times. */
 export function initDropdown() {
   attachDocumentListeners();
+  ensurePopoverStyles();
 
   document.querySelectorAll(A.wrap).forEach((wrapEl, wrapIndex) => {
     const wrap = /** @type {HTMLElement} */ (wrapEl);
@@ -136,11 +197,100 @@ export function initDropdown() {
     toggle.setAttribute("aria-controls", content.id);
     toggle.setAttribute("aria-expanded", "false");
     content.setAttribute("aria-labelledby", toggle.id);
-    content.style.display = "none";
+    if (CAN_PORTAL) {
+      // "manual", not "auto": the outside-click and Escape handlers below stay
+      // authoritative, and light-dismiss can't race them. The panel stays a DOM
+      // descendant of its wrap, so wrap.contains(target) keeps working — the
+      // top layer changes where it paints, not where it lives.
+      content.setAttribute("popover", "manual");
+      // No inline display:none — that would beat the UA's
+      // [popover]:not(:popover-open) rule and showPopover() could never
+      // reveal it.
+    } else {
+      content.style.display = "none";
+    }
     content.style.transformOrigin = "top";
 
     /** @type {Animation | null} */
     let currentAnimation = null;
+
+    const isOpen = () => toggle.getAttribute("aria-expanded") === "true";
+
+    // The panel's unconstrained size, measured once per open while it is still
+    // in normal flow. Repositioning reuses it — re-measuring a clamped,
+    // scrolling panel would feed back on itself.
+    let naturalSize = { width: 0, height: 0 };
+    // Whether the last placement had to clamp. Decides the resting overflow.
+    let clamped = false;
+
+    // Writes geometry ONLY — never `height`. A reposition landing mid-tween
+    // therefore can't fight the animation: the tween finishes to its original
+    // target and max-height clamps the result if the space shrank underneath.
+    const reposition = () => {
+      if (!CAN_PORTAL || !isOpen()) return;
+      const { placement, top, left, maxHeight } = place({
+        anchor: toggle.getBoundingClientRect(),
+        panel: naturalSize,
+        viewport: viewportBox(),
+        gap: GAP_PX,
+        inset: INSET_PX,
+      });
+      content.style.top = `${top}px`;
+      content.style.left = `${left}px`;
+      content.style.maxHeight = `${maxHeight}px`;
+      // Anchor the scale/slide at the toggle, whichever side we landed on.
+      content.style.transformOrigin = placement === "bottom" ? "top" : "bottom";
+      wrap.setAttribute("data-dropdown-placement", placement);
+      content.setAttribute("data-dropdown-placement", placement);
+      clamped = maxHeight < naturalSize.height;
+      return maxHeight;
+    };
+
+    // Measures in normal flow, hands the panel to the top layer, positions it.
+    // Returns the height the open tween should animate to.
+    //
+    // The measure-first order matters: Webflow may author the panel's width as
+    // a percentage of .explorer_filter_dropdown, and once the panel is fixed
+    // that percentage would resolve against the viewport instead. So we read
+    // the width while the cascade still resolves it correctly, then pin it.
+    const portalOpen = () => {
+      content.style.visibility = "hidden";
+      content.style.display = "block";
+      content.style.height = "auto";
+      content.style.maxHeight = "none";
+      naturalSize = {
+        width: content.offsetWidth,
+        height: content.scrollHeight,
+      };
+
+      // Clearing inline display hands visibility back to the UA's
+      // [popover]:not(:popover-open) rule, so showPopover() takes effect.
+      content.style.display = "";
+      content.style.visibility = "";
+      if (!content.matches(":popover-open")) content.showPopover();
+
+      content.style.width = `${naturalSize.width}px`;
+      // `?? naturalSize.height` is belt-and-braces: open() sets aria-expanded
+      // before calling this, so reposition()'s isOpen() guard always passes.
+      const maxHeight = reposition() ?? naturalSize.height;
+      // Tween to the CLAMPED height. Animating to the natural height under a
+      // smaller max-height would render as an instant jump, not an animation.
+      return Math.min(naturalSize.height, maxHeight);
+    };
+
+    // Undoes portalOpen. Leaves the tween's own inline state to
+    // clearInlineState().
+    const portalClose = () => {
+      if (!CAN_PORTAL) return;
+      if (content.matches(":popover-open")) content.hidePopover();
+      content.style.width = "";
+      content.style.top = "";
+      content.style.left = "";
+      content.style.maxHeight = "";
+      content.style.transformOrigin = "top";
+      wrap.removeAttribute("data-dropdown-placement");
+      content.removeAttribute("data-dropdown-placement");
+    };
 
     // Snapshot whatever the in-flight animation is currently rendering, commit
     // those values to inline style, then cancel — lets the next animation
@@ -203,8 +353,6 @@ export function initDropdown() {
       content.style.transform = "";
     };
 
-    const isOpen = () => toggle.getAttribute("aria-expanded") === "true";
-
     const open = () => {
       if (isOpen()) return;
       // Only one dropdown open at a time — sidesteps z-index conflicts when
@@ -223,14 +371,21 @@ export function initDropdown() {
         opacity: CLOSED_OPACITY,
         transform: CLOSED_TRANSFORM,
       };
-      content.style.display = "block";
-      content.style.height = "auto";
-      const toHeight = content.scrollHeight;
+      let toHeight;
+      if (CAN_PORTAL) {
+        toHeight = portalOpen();
+      } else {
+        content.style.display = "block";
+        content.style.height = "auto";
+        toHeight = content.scrollHeight;
+      }
 
       activeDropdown = {
         wrap,
         toggle,
+        content,
         close,
+        reposition,
         focusableItems: /** @type {HTMLElement[]} */ ([
           ...content.querySelectorAll(FOCUSABLE_ITEM_SELECTOR),
         ]),
@@ -241,8 +396,9 @@ export function initDropdown() {
         { height: toHeight, opacity: OPEN_OPACITY, transform: OPEN_TRANSFORM },
         () => {
           clearInlineState();
-          // Let descendants overflow once the dropdown is settled open.
-          content.style.overflow = "";
+          // A clamped panel keeps scrolling internally. An unclamped one lets
+          // descendants (focus rings, submenus) overflow, as before.
+          content.style.overflow = clamped ? "auto" : "";
         },
       );
     };
@@ -264,7 +420,9 @@ export function initDropdown() {
         { height: 0, opacity: CLOSED_OPACITY, transform: CLOSED_TRANSFORM },
         () => {
           clearInlineState();
-          content.style.display = "none";
+          if (CAN_PORTAL) portalClose();
+          else content.style.display = "none";
+          content.style.overflow = "";
           wrap.style.zIndex = "";
           if (allClosed()) zCounter = 0;
         },
