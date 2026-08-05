@@ -183,6 +183,70 @@ function attachDocumentListeners() {
   });
 }
 
+// ── Anchor tracking ──────────────────────────────────────────
+// One rAF-throttled reposition shared by every source that can move an open
+// panel. Attached on open, detached on close.
+let trackingFrame = 0;
+
+function onAnchorMove(event) {
+  // Scrolling INSIDE an open panel must not re-run positioning — on a clamped
+  // list that would fight the user's own scroll.
+  const target = event?.target;
+  if (
+    target instanceof Node &&
+    activeDropdown &&
+    activeDropdown.content.contains(target)
+  )
+    return;
+  if (trackingFrame) return;
+  trackingFrame = requestAnimationFrame(() => {
+    trackingFrame = 0;
+    activeDropdown?.reposition();
+  });
+}
+
+/** @type {ResizeObserver | null} */
+let panelObserver = null;
+
+function startTracking() {
+  if (!CAN_PORTAL) return;
+  // Capture phase: scroll events don't bubble, but they do traverse capture, so
+  // this single listener sees every ancestor scroller — including the bottom
+  // sheet's host, whose snap animation IS a scroll. That's why dropdown.js
+  // never has to know that <bottom-sheet> exists.
+  window.addEventListener("scroll", onAnchorMove, {
+    capture: true,
+    passive: true,
+  });
+  window.addEventListener("resize", onAnchorMove);
+  window.visualViewport?.addEventListener("resize", onAnchorMove);
+  window.visualViewport?.addEventListener("scroll", onAnchorMove);
+}
+
+function stopTracking() {
+  window.removeEventListener("scroll", onAnchorMove, { capture: true });
+  window.removeEventListener("resize", onAnchorMove);
+  window.visualViewport?.removeEventListener("resize", onAnchorMove);
+  window.visualViewport?.removeEventListener("scroll", onAnchorMove);
+  panelObserver?.disconnect();
+  panelObserver = null;
+  if (trackingFrame) {
+    cancelAnimationFrame(trackingFrame);
+    trackingFrame = 0;
+  }
+}
+
+// Watches a settled panel for content-driven size changes — Finsweet shows and
+// hides facet options live (fs-list-emptyfacet="hide"), so the natural height
+// moves while the panel is open and the clamp has to follow. Only attached
+// after the open tween finishes; during the tween the height is animating and
+// every frame would fire.
+function observePanel(entry) {
+  if (!CAN_PORTAL || panelObserver) return;
+  panelObserver = new ResizeObserver(() => onAnchorMove());
+  panelObserver.observe(entry.content);
+}
+
 const allClosed = () => activeDropdown === null;
 
 // ── Init ─────────────────────────────────────────────────────
@@ -266,6 +330,17 @@ export function initDropdown() {
       wrap.setAttribute("data-dropdown-placement", placement);
       content.setAttribute("data-dropdown-placement", placement);
       clamped = maxHeight < naturalSize.height;
+      // Keep the RESTING overflow in sync with `clamped` even after the panel
+      // has settled open. reposition() is the only place `clamped` can change
+      // post-settle (the tracking loop calls it on scroll/resize/sheet-drag,
+      // and the ResizeObserver calls it on content-driven height changes), so
+      // it's the single correct place to react to that change too — anywhere
+      // else would mean re-deriving "did clamped change" from scratch.
+      // Guarded on `!currentAnimation` so this never fights animateTo's own
+      // `overflow: hidden`, which owns the property for the ~200ms tween; the
+      // tween's onDone callback sets the resting value once currentAnimation
+      // is already null, so there's no gap where both would try to write it.
+      if (!currentAnimation) content.style.overflow = clamped ? "auto" : "";
       return maxHeight;
     };
 
@@ -413,6 +488,7 @@ export function initDropdown() {
           ...content.querySelectorAll(FOCUSABLE_ITEM_SELECTOR),
         ]),
       };
+      startTracking();
 
       animateTo(
         from,
@@ -422,6 +498,7 @@ export function initDropdown() {
           // A clamped panel keeps scrolling internally. An unclamped one lets
           // descendants (focus rings, submenus) overflow, as before.
           content.style.overflow = clamped ? "auto" : "";
+          if (activeDropdown?.content === content) observePanel(activeDropdown);
         },
       );
     };
@@ -430,7 +507,13 @@ export function initDropdown() {
       if (!isOpen()) return;
       wrap.classList.remove("is-active");
       toggle.setAttribute("aria-expanded", "false");
-      if (activeDropdown && activeDropdown.wrap === wrap) activeDropdown = null;
+      // Detach synchronously, not in the tween's callback — a fast reopen would
+      // otherwise let the old close's callback tear down the new panel's
+      // tracking. Not repositioning during the ~200ms close tween is fine.
+      if (activeDropdown && activeDropdown.wrap === wrap) {
+        stopTracking();
+        activeDropdown = null;
+      }
 
       const from = snapshotAndStop() || {
         height: content.getBoundingClientRect().height,
