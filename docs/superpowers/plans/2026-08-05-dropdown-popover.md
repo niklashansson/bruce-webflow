@@ -734,19 +734,123 @@ git commit -m "feat(dropdown): track the anchor while a panel is open"
 
 ---
 
-## Task 4: Build and verify in the browser
+## Task 4: Headless smoke harness
+
+**Added 2026-08-05, after Tasks 1–3.** Not in the original plan. Three defects
+surfaced during implementation — the CSS specificity inversion, the inert
+ResizeObserver, and the reposition oscillation — and none were visible to the
+verification this plan originally specified. Each was caught only because a
+reviewer drove a real browser, and each reviewer wrote and then discarded
+essentially the same harness. The oscillation is additionally invisible on
+macOS, where overlay scrollbars cannot trigger it, so a manual pass on the
+maintainer's machine would have shipped it. This task makes that verification
+permanent and repeatable.
+
+**Files:**
+- Create: `tests/dropdown-dom.test.mjs`
+- Modify: `package.json` (devDependency + script only)
+
+**Interfaces:**
+- Consumes: `src/dropdown.js`, `src/dropdown-place.js` as shipped.
+- Produces: nothing later tasks depend on.
+
+**Constraints specific to this task:**
+- **devDependency only.** It must not enter the Parcel bundle. `pnpm build`
+  output must be byte-identical with and without it installed.
+- **No bundled-browser download.** Use the already-installed Chrome (e.g.
+  `puppeteer-core` with a resolved executable path, or CDP directly). A
+  300 MB Chromium download in a repo whose only runtime dep is `supercluster`
+  is not acceptable.
+- **Skip, don't fail, when no browser is available.** If Chrome cannot be
+  located, print a clear skip message and exit 0, so the existing
+  `node tests/*.test.mjs` habit does not start failing on a machine without
+  Chrome.
+- Serve `src/` over `http://localhost` and import the real modules. Do not
+  copy, inline or stub the source — the point is to test what ships.
+- Match the existing test-file conventions where they apply: framework-free,
+  a `check()` helper, a `passed` counter, a final `✓ all N assertions passed`.
+
+**Properties to assert** (each one corresponds to a defect this branch
+actually produced, or to behaviour a reviewer confirmed and that must not
+regress):
+
+1. **Authored styles survive portaling.** A panel styled by an author class
+   with `padding`, `background`, `border`, `color` and `overflow` retains all
+   of them while open. (Caught Critical 1 in Task 2.)
+2. **The measurement window is clean.** With `popover` set but before
+   `showPopover()`, the panel computes `position: static` and reports the same
+   `offsetWidth` as it would with no `popover` attribute at all — tested both
+   with an authored `width: 50%` and with no authored width. (Caught
+   Critical 2 in Task 2.)
+3. **Structural styles apply while open:** `position: fixed`, `display: block`,
+   including on a panel whose author class sets `display: none`.
+4. **Flip and clamp.** A panel that cannot fit below is placed above with an
+   8px gap; one that fits neither is clamped and scrolls.
+5. **Content changes re-place a settled panel.** Shrinking content on a
+   top-placed panel moves both `top` and `max-height`, and the 8px gap holds.
+   (Caught the Important finding in Task 3.)
+6. **Reposition converges.** Under the oscillation geometry — classic
+   space-consuming scrollbars, a `width: 100%; aspect-ratio: 1/1` child, and
+   available space between the child's clamped and unclamped heights —
+   consecutive animation frames reach a fixed point and the rAF count stops
+   climbing. Sweep several panel sizes bracketing the two heights; a single
+   size can pass by luck. (Caught the Critical in Task 3 fix round 1.)
+7. **Listeners net to zero.** Across several open/close cycles, `scroll`
+   (capture), `resize`, and `visualViewport` listener adds equal removes, and
+   the `ResizeObserver`'s observed target count returns to zero.
+8. **The fallback path attaches nothing.** With `showPopover` deleted before
+   the module loads, zero listeners are added, no `ResizeObserver` is
+   constructed, and the dropdown still opens and closes.
+
+- [ ] **Step 1: Write the harness and confirm it fails against a known-bad build**
+
+Before trusting a green run, prove the harness has teeth. Check out
+`a7d9534`'s `src/` into a temp directory outside the repo and point the
+harness at it: assertion 6 must FAIL there (that commit oscillates). A harness
+that passes against the known-bad build is measuring nothing. Do the same for
+assertion 1 against `eb2da51`, which strips authored styles.
+
+Record both known-bad results in the report.
+
+- [ ] **Step 2: Run it against HEAD**
+
+Run: `node tests/dropdown-dom.test.mjs`
+Expected: all assertions pass.
+
+- [ ] **Step 3: Confirm the bundle is unaffected**
+
+Run: `rm -rf .parcel-cache dist && pnpm build`, and confirm the emitted
+`dist/*.js` does not reference the browser driver.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add tests/dropdown-dom.test.mjs package.json pnpm-lock.yaml
+git commit -m "test(dropdown): headless smoke coverage for the portal and tracking"
+```
+
+---
+
+## Task 5: Build and verify in the browser
 
 **Files:**
 - Modify: `dist/*` (Parcel output, committed minified)
 
 **Interfaces:**
-- Consumes: everything from Tasks 1–3.
+- Consumes: everything from Tasks 1–4.
 - Produces: nothing further.
 
-- [ ] **Step 1: Run the unit tests**
+- [ ] **Step 1: Run the tests**
 
-Run: `node tests/dropdown-place.test.mjs`
-Expected: `✓ all 9 assertions passed`
+Run: `node tests/dropdown-place.test.mjs` — expected `✓ all 9 assertions passed`.
+
+Run: `node tests/dropdown-dom.test.mjs` — expected all assertions pass (or a
+clear skip message if Chrome is unavailable).
+
+The manual checklist in Step 3 stays, but its job has narrowed: Task 4's
+harness now owns the mechanical properties, so the human pass is for
+judgement calls a script cannot make — does it look and feel right on a real
+phone, against real content.
 
 - [ ] **Step 2: Build against a clean cache**
 
