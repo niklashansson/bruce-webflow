@@ -150,16 +150,36 @@ then portal:
 1. Inline `display: block; visibility: hidden; height: auto` — renders in
    place, invisible, still in flow. (Inline `display` beats the UA's
    `[popover]:not(:popover-open) { display: none }`.) Read `offsetWidth` and
-   `scrollHeight`.
+   `offsetHeight`.
 2. Clear those inline values, call `showPopover()`.
 3. Call `place()` with the toggle's rect, the measured natural size, and the
    viewport box. Apply the result: pin `width` to the measured width, set
-   `top`, `left`, `max-height`.
+   `top` and `left`, and set `max-height` **only when the placement actually
+   clamps** — clear it otherwise.
 4. Run the existing tween from height 0 to the clamped height.
    `transform-origin` is `top` when placed below, `bottom` when flipped, so
    the scale still anchors at the toggle.
-5. On finish, set `overflow-y: auto` when clamped (`maxHeight <
-   panel.height`), otherwise clear `overflow` as today.
+5. On finish, set the resting overflow from `restingOverflow()` (see
+   *Resting overflow* below).
+
+**Both the measurement and the clamp are in border-box units.** Webflow sets
+`box-sizing: border-box` globally, so the `max-height` we write caps the
+border box — but `scrollHeight` reports the *padding* box, excluding borders
+and (once the box overflows) the bottom padding. Feeding one into the other
+makes every bordered panel settle short: measured, `border:3px; padding:10px`
+settled 12px under its natural height with content spilling past the border,
+on the *unclamped* path, i.e. the common case. So `portalOpen()` measures with
+`offsetHeight`, and later refreshes read
+`scrollHeight + (offsetHeight - clientHeight)`.
+
+That border delta is captured **once per open**, not read live. Live, it
+swings by the scrollbar width across the clamp boundary — `overflow: scroll`
+reserves a gutter, `auto` does not — which would reopen the oscillation
+described under *Resting overflow* on the horizontal axis.
+
+Writing `max-height` only when it clamps matters for a second reason: an
+unconditional write also stomps any `max-height` the site author set on the
+panel.
 
 Close calls `hidePopover()` and clears the inline geometry (`width`, `top`,
 `left`, `max-height`, `overflow`) alongside the existing
@@ -180,9 +200,15 @@ While a panel is open, reposition on:
   *is* a scroll. No `bottom-sheet` coupling in `dropdown.js`.
 - `resize` on `window`.
 - `resize` and `scroll` on `visualViewport` when it exists.
-- A `ResizeObserver` on the panel — Finsweet shows and hides facet options
-  dynamically (`fs-list-emptyfacet="hide"`), so natural height changes while
-  open and the clamp has to follow.
+- A `ResizeObserver` on the panel's **element children** — Finsweet shows and
+  hides facet options dynamically (`fs-list-emptyfacet="hide"`), so natural
+  height changes while open and the clamp has to follow. It watches the
+  children rather than the panel because the panel's own border box is capped
+  by the `max-height` we write: once clamped, growth past the clamp changes
+  nothing about that box, and the observer would never fire for exactly the
+  case it exists to catch. Children are not capped, so they keep reporting
+  real changes. Falls back to observing the panel itself when it has no
+  element children.
 
 All funnel into one `requestAnimationFrame`-throttled reposition. Scroll
 events whose target is the panel or inside it are ignored, so scrolling a
@@ -190,10 +216,63 @@ clamped option list does not re-trigger positioning and jitter.
 
 Listeners attach on open and detach on close.
 
-A reposition writes `top`, `left` and `max-height` only — never `height`. So
-one landing mid-tween cannot fight the animation: the tween finishes to its
-original target and `max-height` clamps the result if the available space
-shrank underneath it.
+**Each reposition re-measures the natural height** rather than trusting the
+value captured at open. Without that the observer fires but recomputes an
+identical stale answer — measured, a top-placed panel whose content shrank
+824px → 88px kept its old `max-height` and drifted 742px from its toggle.
+
+A reposition writes `top`, `left`, `max-height` and the resting overflow —
+never `height`. So one landing mid-tween cannot fight the animation: the tween
+finishes to its original target and `max-height` clamps the result if the
+available space shrank underneath it.
+
+## Resting overflow
+
+Naively this is two-state — `auto` when clamped, cleared otherwise. That
+oscillates. Re-measuring on every reposition closes a feedback path on
+platforms with space-consuming ("classic") scrollbars whenever the panel holds
+a child whose height derives from its width (`aspect-ratio`, `img
+{width:100%}`, a video embed):
+
+> clamp → `overflow: auto` shows a scrollbar → the child's available width
+> drops by the scrollbar width → the child gets shorter → the new natural
+> height now fits → unclamp → the scrollbar goes → the child widens → it grows
+> → clamp again.
+
+Measured at ~120 frames per second indefinitely, and **silent**: the observer
+callback defers to `requestAnimationFrame`, so Chrome never attributes it and
+emits no "ResizeObserver loop" warning. It is invisible on macOS and iOS,
+where overlay scrollbars have no width.
+
+So the resting overflow is three-state. A per-open `gutterReserved` latch flips
+true on the first clamp and holds until the panel closes; while it is set, an
+unclamped panel rests at `overflow: scroll` rather than cleared. The gutter
+therefore never disappears mid-open, `clientWidth` stops moving, and the cycle
+is severed *by construction* rather than by tuning a numeric margin.
+
+The cost is a reserved-but-unused scrollbar track, and a panel 15px narrower
+and shorter than it would otherwise be, if its content later shrinks back
+below the clamp — until it is closed and reopened. Visible to Windows Chrome
+users, invisible on macOS/iOS. Accepted deliberately over a hysteresis margin
+that could re-oscillate under some other geometry.
+
+## Surviving re-parenting
+
+`explorer.js` moves the whole filter form between the desktop toolbar and the
+sheet header at runtime, including from the mobile-breakpoint resize handler —
+so an open panel's ancestor can be re-parented under it, on something as
+ordinary as an orientation change.
+
+Moving an element that is in the top layer silently removes it: the panel is
+dropped back to `display: none` while `aria-expanded`, `.is-active`,
+`activeDropdown` and the tracking listeners all still say "open". The next tap
+on the toggle then *closes* the already-invisible panel instead of opening it.
+
+`dropdown.js` heals itself by checking `:popover-open` on the existing
+reposition funnel and running its normal close path when the panel has been
+dropped. Note the obvious alternative does **not** work: the HTML spec removes
+a re-parented popover with `fireEvents = false`, so no `toggle` event is
+dispatched and a `toggle` listener never sees it.
 
 ## Viewport box
 

@@ -23,6 +23,34 @@ Spec: `docs/superpowers/specs/2026-08-05-dropdown-popover-design.md`
 
 ---
 
+> ## ⚠️ This plan is a historical record, not a description of the shipped code
+>
+> Executing it surfaced four defects in the plan itself, each corrected during
+> review. **The spec is the source of truth for as-shipped behaviour.** The
+> code blocks in Tasks 2 and 3 below are what was originally specified, and in
+> these four places the shipped code deliberately does the opposite. Do not
+> "restore" them.
+>
+> 1. **Natural height is re-measured on every reposition.** Task 3 says it is
+>    measured once per open because "re-measuring a clamped, scrolling panel
+>    would feed back on itself." Measuring once leaves the `ResizeObserver`
+>    inert. The feedback the comment warns about is real, and is severed by the
+>    `gutterReserved` latch instead — see the spec's *Resting overflow*.
+> 2. **The resting overflow is three-state**, not `clamped ? "auto" : ""`.
+>    `gutterReserved` adds a `"scroll"` state that prevents a ~120fps silent
+>    oscillation on classic scrollbars.
+> 3. **The `ResizeObserver` watches the panel's element children**, not the
+>    panel. The panel's own box is capped by the `max-height` we write, so it
+>    cannot report growth past the clamp.
+> 4. **`max-height` is written only when it clamps, and in border-box units.**
+>    `scrollHeight` is a padding-box read; using it to cap a border box made
+>    every bordered panel settle short on the common unclamped path.
+>
+> The UA-reset stylesheet in Task 2 Step 1 was corrected in place (commit
+> `e88b7d7`) and does match what ships.
+
+---
+
 ## File Structure
 
 | File | Responsibility |
