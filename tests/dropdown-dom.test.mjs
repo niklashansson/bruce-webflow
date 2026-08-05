@@ -808,6 +808,108 @@ try {
     await page.close();
   }
 
+  // ── 10. A re-parented panel self-heals ─────────────────────
+  // Final whole-branch review, Important. explorer.js's placeFilterBar() moves
+  // the filter form — an ancestor of every filter dropdown — into and out of
+  // the bottom sheet on a breakpoint crossing, i.e. on orientation change.
+  // That drops the panel out of the top layer with NO toggle event, leaving
+  // aria-expanded="true", `.is-active`, `activeDropdown` and the tracking
+  // listeners live against a `display: none` panel — so the next tap closed
+  // instead of opening, and a wrap removed outright leaked its listeners.
+  {
+    const page = await newPage();
+    await page.evaluate(
+      (css, html) => window.__mount(css, html),
+      `.bar { margin: 40px; }
+       .w { position: relative; width: 300px; }
+       .p { width: 200px; }
+       .p .item { height: 30px; }`,
+      `<div id="home"><div class="bar">
+         <div data-dropdown-element="wrap" class="w">
+           <button data-dropdown-element="toggle">t</button>
+           <div data-dropdown-element="content" class="p">
+             <div class="item"><a href="#">one</a></div>
+             <div class="item"><a href="#">two</a></div>
+           </div>
+         </div>
+       </div></div>
+       <div id="elsewhere"></div>`,
+    );
+    const healed = await page.evaluate(async (settle) => {
+      const toggle = document.querySelector('[data-dropdown-element="toggle"]');
+      const wrapEl = document.querySelector('[data-dropdown-element="wrap"]');
+      const panel = document.querySelector(".p");
+      toggle.click();
+      await window.__sleep(settle);
+      const opened = {
+        expanded: toggle.getAttribute("aria-expanded"),
+        popoverOpen: panel.matches(":popover-open"),
+      };
+
+      // Move an ANCESTOR of the wrap, exactly as placeFilterBar() does.
+      document.querySelector("#elsewhere").appendChild(document.querySelector(".bar"));
+      await window.__sleep(settle + 250);
+      const after = {
+        expanded: toggle.getAttribute("aria-expanded"),
+        isActive: wrapEl.classList.contains("is-active"),
+        popoverOpen: panel.matches(":popover-open"),
+        zIndex: wrapEl.style.zIndex,
+        stillMoved: wrapEl.closest("#elsewhere") !== null,
+      };
+      const { win, vv } = window.__log;
+      const balance = {
+        winAdd: window.__tally(win.add),
+        winRemove: window.__tally(win.remove),
+        vvAdd: window.__tally(vv.add),
+        vvRemove: window.__tally(vv.remove),
+        observed: window.__roObserved(),
+      };
+
+      // The user-visible symptom: the next tap must OPEN, not close.
+      toggle.click();
+      await window.__sleep(settle);
+      const reopened = {
+        expanded: toggle.getAttribute("aria-expanded"),
+        popoverOpen: panel.matches(":popover-open"),
+        rendered: panel.offsetHeight > 0,
+      };
+      return { opened, after, balance, reopened };
+    }, OPEN_SETTLE_MS);
+
+    check(
+      "10a. the panel opens into the top layer to begin with",
+      healed.opened,
+      { expanded: "true", popoverOpen: true },
+    );
+    check(
+      "10b. re-parenting an open wrap resyncs the open state instead of stranding it",
+      healed.after,
+      {
+        expanded: "false",
+        isActive: false,
+        popoverOpen: false,
+        zIndex: "",
+        stillMoved: true,
+      },
+    );
+    check(
+      "10c. the self-heal detaches the tracking listeners and the ResizeObserver",
+      healed.balance,
+      {
+        winAdd: { scroll: 1, resize: 1 },
+        winRemove: { scroll: 1, resize: 1 },
+        vvAdd: { resize: 1, scroll: 1 },
+        vvRemove: { resize: 1, scroll: 1 },
+        observed: 0,
+      },
+    );
+    check(
+      "10d. the next tap on the toggle opens the panel again",
+      healed.reopened,
+      { expanded: "true", popoverOpen: true, rendered: true },
+    );
+    await page.close();
+  }
 } finally {
   await browser.close();
   server.close();

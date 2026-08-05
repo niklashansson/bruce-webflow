@@ -389,11 +389,46 @@ export function initDropdown() {
     const restingOverflow = () =>
       clamped ? "auto" : gutterReserved ? "scroll" : "";
 
+    // Re-parenting or removing an element while its popover is showing drops
+    // it out of the top layer. explorer.js does exactly that: placeFilterBar()
+    // moves the whole filter form — an ancestor of every filter dropdown —
+    // into and out of the bottom sheet whenever the layout crosses the mobile
+    // breakpoint, i.e. on an orientation change, which can land while a panel
+    // is open. That re-parenting is legitimate; tolerating it is this module's
+    // job.
+    //
+    // The UA hides the popover SILENTLY: the spec runs the removing steps'
+    // hide-popover with fireEvents = false, so no `toggle` (or `beforetoggle`)
+    // event is dispatched — verified in Chrome 151, where a re-parented panel
+    // goes `display: none` with an empty event log. Listening for `toggle`
+    // therefore would not catch this at all; the honest signal is the state
+    // itself, so this asks `:popover-open` directly.
+    //
+    // Without it, aria-expanded stays "true", `.is-active` stays on the wrap,
+    // `activeDropdown` stays set and the tracking listeners stay attached,
+    // writing geometry to a `display: none` panel — and the next tap on the
+    // toggle closes instead of opening. Routing through close() resyncs all of
+    // that AND detaches the listeners and the ResizeObserver, which is also
+    // what stops a wrap removed from the DOM while open from leaking them.
+    //
+    // Called from the two places that can observe a settled panel: every
+    // reposition() (the ResizeObserver fires a 0×0 entry for the panel's now
+    // box-less children the moment it is dropped, and orientation changes fire
+    // window/visualViewport resize too), and the open tween's completion,
+    // which covers a drop during the ~200ms before the observer is attached.
+    const healIfDropped = () => {
+      if (!CAN_PORTAL || !isOpen() || content.matches(":popover-open"))
+        return false;
+      close();
+      return true;
+    };
+
     // Writes geometry ONLY — never `height`. A reposition landing mid-tween
     // therefore can't fight the animation: the tween finishes to its original
     // target and max-height clamps the result if the space shrank underneath.
     const reposition = () => {
       if (!CAN_PORTAL || !isOpen()) return;
+      if (healIfDropped()) return;
       // Re-measure the natural height from scrollHeight before placing.
       // scrollHeight reports the full content height even while the panel is
       // currently clamped and scrolling (unlike offsetHeight, which would
@@ -618,7 +653,8 @@ export function initDropdown() {
           // this open has clamped before, in which case restingOverflow()
           // keeps the gutter reserved (see gutterReserved's declaration).
           content.style.overflow = restingOverflow();
-          if (activeDropdown?.content === content) observePanel(activeDropdown);
+          if (activeDropdown?.content === content && !healIfDropped())
+            observePanel(activeDropdown);
         },
       );
     };
