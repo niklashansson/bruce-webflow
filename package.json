@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "for f in tests/*.test.mjs; do node \"$f\" || exit 1; done",
     "build": "parcel build src/index.js src/studio.js src/explorer.js --dist-dir dist",
     "start": "parcel src/index.js src/studio.js src/explorer.js"
   },
@@ -14,5 +14,8 @@
   "dependencies": {
     "parcel": "^2.16.4",
     "supercluster": "^8.0.1"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.5.0"
   }
 }
