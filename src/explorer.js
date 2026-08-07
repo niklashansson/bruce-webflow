@@ -31,6 +31,7 @@
 
 import { MAPBOX_STYLE, loadMapboxGl, loadScriptOnce } from "./mapbox.js";
 import { requestUserLocation } from "./location.js";
+import { planNearby } from "./nearby-plan.js";
 
 const S = {
   wrap: '[data-explorer-element="wrap"]',
@@ -73,6 +74,10 @@ const S = {
   // inverted — see syncNearbyToggle.
   nearbyToggle: '[data-explorer-element="nearby-toggle"]',
   nearbySource: '[data-explorer-element="nearby-source"]',
+  // A page-level "Clear all" — fs-list-element="clear" with NO fs-list-field.
+  // The field-scoped clears (fs-list-field="tier" / "category") clear one
+  // dropdown, not the page, and must not reset the nearby scope.
+  globalClear: '[fs-list-element="clear"]:not([fs-list-field])',
 };
 
 // The free-text search input — counted for "are filters active?" but never as a
@@ -263,6 +268,82 @@ function syncExclusiveToggle(form) {
   }
 }
 
+// ── Nearby-areas toggle ──────────────────────────────────────
+// The visible switch reads positively ("Show studios in nearby areas") but the
+// underlying Finsweet condition narrows: `in-metro equal true` must be ACTIVE
+// while the switch is OFF. A Finsweet input only contributes while checked, so
+// one input cannot express that. The state is split across a visible toggle
+// and a hidden source that are always inverses, and this function keeps them
+// so — page-globally, which is what makes the duplicated desktop/mobile filter
+// bars agree without special-casing them.
+//
+// Writes are asymmetric, and deliberately:
+//   - sources via .click(), never .checked — .checked desyncs Finsweet's model,
+//     and the click's `input` event is what makes Finsweet re-read the
+//     condition (fs-list-filteron defaults to "input").
+//   - toggles via .checked, never .click() — they are not Finsweet inputs,
+//     their visuals are pure CSS :has(:checked), and a click would re-enter
+//     this function down the wrong branch.
+//
+// Spec: docs/superpowers/specs/2026-08-07-explorer-nearby-toggle-design.md
+let nearbyClearPending = false;
+let nearbyClearBound = false;
+
+function syncNearbyToggle(form, origin) {
+  const toggleEls = [...form.querySelectorAll(S.nearbyToggle)];
+  const sourceEls = [...form.querySelectorAll(S.nearbySource)];
+  if (toggleEls.length === 0 || sourceEls.length === 0) return;
+
+  const originKind =
+    origin instanceof Element
+      ? origin.matches(S.nearbyToggle)
+        ? "toggle"
+        : origin.matches(S.nearbySource)
+          ? "source"
+          : null
+      : null;
+
+  const plan = planNearby({
+    toggles: toggleEls.map((el) => el.checked),
+    sources: sourceEls.map((el) => el.checked),
+    originKind,
+    originIndex: originKind === "toggle" ? toggleEls.indexOf(origin) : -1,
+    clearPending: nearbyClearPending,
+  });
+
+  toggleEls.forEach((el, i) => {
+    if (el.checked !== plan.toggles[i]) el.checked = plan.toggles[i];
+  });
+  // Only click what actually disagrees — this equality guard is what
+  // terminates the change → click → change cycle.
+  sourceEls.forEach((el, i) => {
+    if (el.checked !== plan.sources[i]) el.click();
+  });
+
+  const wrap = form.closest(S.wrap);
+  if (wrap instanceof HTMLElement) {
+    wrap.dataset.explorerNearby = plan.nearby ? "true" : "false";
+  }
+}
+
+// "Clear all" resets the page to its defaults, and the default is metro-only.
+// Finsweet's clear would otherwise leave the source unchecked — a cleared
+// state that differs from the initial one. We only raise a flag here; the
+// re-assertion happens on the next refreshFilterForms, which is also what
+// lowers it (this function must not, or only the first form would see it).
+// Delegated on the document because the clear buttons live OUTSIDE the
+// filters form.
+function bindNearbyClear() {
+  if (nearbyClearBound) return;
+  nearbyClearBound = true;
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest(S.globalClear)) {
+      nearbyClearPending = true;
+    }
+  });
+}
+
 // Keep the city-switch links (toolbar dropdown + modal + locale copies) in sync
 // with the live filter query, so changing city carries the active filters with
 // it ("Yoga in Gothenburg" → "Yoga in Oslo"). Category/tier are city-agnostic,
@@ -289,9 +370,12 @@ function refreshFilterForms() {
   document.querySelectorAll(S.filtersForm).forEach((form) => {
     if (form instanceof HTMLFormElement) {
       syncExclusiveToggle(form);
+      syncNearbyToggle(form, null);
       reflectFilters(form);
     }
   });
+  // Every form has now seen the pending clear; lower it.
+  nearbyClearPending = false;
   syncCityLinks();
 }
 
@@ -300,17 +384,20 @@ function refreshFilterForms() {
 // instantly on interaction. reflectFilters is idempotent, so the double-run
 // with afterRender is harmless.
 function setupFilterForms() {
+  bindNearbyClear();
   document.querySelectorAll(S.filtersForm).forEach((el) => {
     const form = /** @type {HTMLFormElement} */ (el);
     if (form.dataset.explorerFiltersInit) return;
     form.dataset.explorerFiltersInit = "true";
     form.addEventListener("submit", (event) => event.preventDefault());
-    form.addEventListener("change", () => {
+    form.addEventListener("change", (event) => {
       syncExclusiveToggle(form);
+      syncNearbyToggle(form, event.target);
       reflectFilters(form);
       syncCityLinks();
     });
     syncExclusiveToggle(form);
+    syncNearbyToggle(form, null);
     reflectFilters(form);
   });
   // Carry any URL-restored filters into the city links on first paint, before
