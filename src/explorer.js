@@ -101,6 +101,14 @@ function readOverThreshold(wrap) {
 // within this window.
 const FILTERING_DELAY_MS = 0;
 
+// A global "Clear all" only produces a Finsweet render (and afterRender) when
+// it actually changes something. On a page that's already metro-only and
+// otherwise unfiltered, clearing is a no-op for Finsweet, so afterRender never
+// fires — this is how long to wait past the live page's
+// `fs-list-debounce="200"` before assuming that happened and applying the
+// clear ourselves. See bindNearbyClear.
+const NEARBY_CLEAR_FALLBACK_MS = 250;
+
 // ── Map config ───────────────────────────────────────────────
 // Fallback center if the page city has no coords in [data-city-list] (Oslo).
 const DEFAULT_CENTER = [10.7522, 59.9139];
@@ -274,8 +282,11 @@ function syncExclusiveToggle(form) {
 // while the switch is OFF. A Finsweet input only contributes while checked, so
 // one input cannot express that. The state is split across a visible toggle
 // and a hidden source that are always inverses, and this function keeps them
-// so — page-globally, which is what makes the duplicated desktop/mobile filter
-// bars agree without special-casing them.
+// so across every pair inside ONE form (form.querySelectorAll) — which is
+// what makes the duplicated desktop/mobile filter bars agree without
+// special-casing them, since the shipped markup keeps both copies inside the
+// single filters form. refreshFilterForms is what extends this across every
+// filters form on the page, if more than one ever exists.
 //
 // Writes are asymmetric, and deliberately:
 //   - sources via .click(), never .checked — .checked desyncs Finsweet's model,
@@ -290,9 +301,24 @@ let nearbyClearPending = false;
 let nearbyClearBound = false;
 
 function syncNearbyToggle(form, origin, clearPending) {
-  const toggleEls = [...form.querySelectorAll(S.nearbyToggle)];
-  const sourceEls = [...form.querySelectorAll(S.nearbySource)];
-  if (toggleEls.length === 0 || sourceEls.length === 0) return;
+  // Filter to real inputs, matching syncExclusiveToggle's guard: the selectors
+  // are bare attribute selectors, and a mis-authored pair (the attribute
+  // landed on the wrapping <label> instead of the nested <input>) would
+  // otherwise put `.checked === undefined` into the plan below. That never
+  // equals a boolean, so the "only click what disagrees" guard never holds
+  // and `.click()` fires on every re-entry — unbounded recursion.
+  const toggleEls = [...form.querySelectorAll(S.nearbyToggle)].filter(
+    (el) => el instanceof HTMLInputElement,
+  );
+  const sourceEls = [...form.querySelectorAll(S.nearbySource)].filter(
+    (el) => el instanceof HTMLInputElement,
+  );
+  // Zero toggles means nothing to sync, full stop. Zero SOURCES is different —
+  // the visible switch is still real, and must still spring back off after
+  // the user flips it — so that half of the early return was dropped:
+  // planNearby's degenerate-input branch already answers `nearby: false` when
+  // `sources` is empty, which is what makes that happen.
+  if (toggleEls.length === 0) return;
 
   const originKind =
     origin instanceof Element
@@ -328,13 +354,20 @@ function syncNearbyToggle(form, origin, clearPending) {
 
 // "Clear all" resets the page to its defaults, and the default is metro-only.
 // Finsweet's clear would otherwise leave the source unchecked — a cleared
-// state that differs from the initial one. We only raise a flag here; the
-// next refreshFilterForms reads it ONCE and lowers it in the same breath
-// (before dispatching to any form), so a raised flag can never outlive one
-// refresh — it cannot wedge raised across a render that never fires (e.g.
-// clearing an already-unfiltered page, where Finsweet has nothing to change
-// and afterRender may never come). Delegated on the document because the
-// clear buttons live OUTSIDE the filters form.
+// state that differs from the initial one. We raise a flag here; whichever
+// refreshFilterForms sees it first reads it ONCE and lowers it in the same
+// breath (before dispatching to any form), so it never survives past the
+// render that consumes it. But that render isn't guaranteed to happen at
+// all: Finsweet only re-renders (firing afterRender) when the clear actually
+// changes something, and on an already metro-only, otherwise-unfiltered page
+// it doesn't — so afterRender can simply never come, and with it never
+// consumed, the flag would sit raised until whatever LATER, unrelated
+// interaction next triggers a refresh (e.g. picking a category), silently
+// applying the clear to that instead. NEARBY_CLEAR_FALLBACK_MS bounds that:
+// if the flag is still raised a beat past Finsweet's debounce, we apply the
+// clear ourselves, so it can never outlive the click that raised it.
+// Delegated on the document because the clear buttons live OUTSIDE the
+// filters form.
 function bindNearbyClear() {
   if (nearbyClearBound) return;
   nearbyClearBound = true;
@@ -342,6 +375,12 @@ function bindNearbyClear() {
     const target = event.target;
     if (target instanceof Element && target.closest(S.globalClear)) {
       nearbyClearPending = true;
+      setTimeout(() => {
+        // Still raised means no render ever consumed it — apply the clear
+        // ourselves. If Finsweet DID render in the meantime,
+        // refreshFilterForms already lowered the flag and this is a no-op.
+        if (nearbyClearPending) refreshFilterForms();
+      }, NEARBY_CLEAR_FALLBACK_MS);
     }
   });
 }
@@ -398,6 +437,13 @@ function setupFilterForms() {
     form.addEventListener("submit", (event) => event.preventDefault());
     form.addEventListener("change", (event) => {
       syncExclusiveToggle(form);
+      // clearPending is always false here — even when this fires as the
+      // reentrant `change` from a clear's forced .click() on a source (see
+      // refreshFilterForms). By that point the click has already made the
+      // source agree with what the clearPending pass computed, so the
+      // canonical-source branch below independently re-derives the same
+      // `nearby: false` on its own; the flag doesn't need to reach this
+      // listener for the clear to hold.
       syncNearbyToggle(form, event.target, false);
       reflectFilters(form);
       syncCityLinks();

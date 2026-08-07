@@ -136,14 +136,45 @@ check(
   { toggles: [false], sources: [], nearby: false },
 );
 check(
+  // sources: [false, false] (nearby: true) rather than [true, true] (nearby:
+  // false) so this can't pass by accident — toggles[7] is undefined either
+  // way, but only the canonical-source fallback lands on `true` here. Dropping
+  // the `originIndex < toggles.length` guard would read toggles[7] as falsy
+  // and wrongly answer `false`.
   "an out-of-range originIndex falls back to the canonical source",
   planNearby({
     toggles: [false, false],
-    sources: [true, true],
+    sources: [false, false],
     originKind: "toggle",
     originIndex: 7,
   }),
-  { toggles: [false, false], sources: [true, true], nearby: false },
+  { toggles: [true, true], sources: [false, false], nearby: true },
+);
+check(
+  // The applier really can produce -1 (indexOf's miss value) for a
+  // non-"toggle" origin; planNearby must still take the canonical-source
+  // branch rather than reading toggles[-1].
+  "originKind toggle with originIndex -1 falls back to the canonical source",
+  planNearby({
+    toggles: [false, false],
+    sources: [false, false],
+    originKind: "toggle",
+    originIndex: -1,
+  }),
+  { toggles: [true, true], sources: [false, false], nearby: true },
+);
+check(
+  // "one dropdown authored with the pair, the other with only the visible
+  // half" — the two .map()s over toggles/sources are independent, so mismatched
+  // lengths must not throw or misalign.
+  "mismatched array lengths (two toggles, one source) still resolve",
+  planNearby({
+    toggles: [false, false],
+    sources: [false],
+    originKind: "source",
+    originIndex: -1,
+  }),
+  { toggles: [true, true], sources: [false], nearby: true },
 );
 
 console.log(`✓ all ${passed} assertions passed`);
