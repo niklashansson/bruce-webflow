@@ -66,6 +66,13 @@ const S = {
   // The "Show exclusive to X" switch — a real Finsweet condition input
   // (fs-list-field="tier" fs-list-operator="equal") inside the filters form.
   exclusiveToggle: '[data-explorer-element="exclusive-toggle"]',
+  // The "Show studios in nearby areas" pair, inside the city dropdown. The
+  // visible switch carries NO fs-list-* attributes; the hidden source is the
+  // real Finsweet condition (fs-list-field="in-metro" fs-list-value="true")
+  // and ships checked, so the default view is metro-only. JS keeps them
+  // inverted — see syncNearbyToggle.
+  nearbyToggle: '[data-explorer-element="nearby-toggle"]',
+  nearbySource: '[data-explorer-element="nearby-source"]',
 };
 
 // The free-text search input — counted for "are filters active?" but never as a
@@ -173,7 +180,11 @@ function reflectFilters(form) {
   for (const el of form.querySelectorAll("input:checked")) {
     // The exclusive toggle is a refinement of the membership selection, not a
     // filter of its own — it must never count into badges or the total.
-    if (el.matches(S.exclusiveToggle)) continue;
+    // The nearby source is scope, not a filter: it ships CHECKED, so counting
+    // it would pin data-explorer-filtered to "true" forever and permanently
+    // hide the discovery collections. (Its visible partner needs no exemption
+    // — it carries no fs-list-field, so the guard below already skips it.)
+    if (el.matches(S.exclusiveToggle) || el.matches(S.nearbySource)) continue;
     const field = el.getAttribute("fs-list-field");
     if (!field || field === "*") continue;
     const key = `${field} ${el.getAttribute("fs-list-value") ?? el.value}`;
