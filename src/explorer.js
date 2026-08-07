@@ -289,7 +289,7 @@ function syncExclusiveToggle(form) {
 let nearbyClearPending = false;
 let nearbyClearBound = false;
 
-function syncNearbyToggle(form, origin) {
+function syncNearbyToggle(form, origin, clearPending) {
   const toggleEls = [...form.querySelectorAll(S.nearbyToggle)];
   const sourceEls = [...form.querySelectorAll(S.nearbySource)];
   if (toggleEls.length === 0 || sourceEls.length === 0) return;
@@ -308,7 +308,7 @@ function syncNearbyToggle(form, origin) {
     sources: sourceEls.map((el) => el.checked),
     originKind,
     originIndex: originKind === "toggle" ? toggleEls.indexOf(origin) : -1,
-    clearPending: nearbyClearPending,
+    clearPending,
   });
 
   toggleEls.forEach((el, i) => {
@@ -329,10 +329,12 @@ function syncNearbyToggle(form, origin) {
 // "Clear all" resets the page to its defaults, and the default is metro-only.
 // Finsweet's clear would otherwise leave the source unchecked — a cleared
 // state that differs from the initial one. We only raise a flag here; the
-// re-assertion happens on the next refreshFilterForms, which is also what
-// lowers it (this function must not, or only the first form would see it).
-// Delegated on the document because the clear buttons live OUTSIDE the
-// filters form.
+// next refreshFilterForms reads it ONCE and lowers it in the same breath
+// (before dispatching to any form), so a raised flag can never outlive one
+// refresh — it cannot wedge raised across a render that never fires (e.g.
+// clearing an already-unfiltered page, where Finsweet has nothing to change
+// and afterRender may never come). Delegated on the document because the
+// clear buttons live OUTSIDE the filters form.
 function bindNearbyClear() {
   if (nearbyClearBound) return;
   nearbyClearBound = true;
@@ -367,15 +369,19 @@ function syncCityLinks() {
 // hook (covers URL restore on load, "Clear all", native query changes) and by
 // a direct `change` listener (instant, ahead of Finsweet's 200ms debounce).
 function refreshFilterForms() {
+  // Read-then-lower BEFORE the loop: this is the single point that consumes
+  // the flag, so it cannot survive this dispatch even if a form's sync throws
+  // or Finsweet never re-renders again. Every form still gets the clear via
+  // the local.
+  const clearPending = nearbyClearPending;
+  nearbyClearPending = false;
   document.querySelectorAll(S.filtersForm).forEach((form) => {
     if (form instanceof HTMLFormElement) {
       syncExclusiveToggle(form);
-      syncNearbyToggle(form, null);
+      syncNearbyToggle(form, null, clearPending);
       reflectFilters(form);
     }
   });
-  // Every form has now seen the pending clear; lower it.
-  nearbyClearPending = false;
   syncCityLinks();
 }
 
@@ -392,12 +398,12 @@ function setupFilterForms() {
     form.addEventListener("submit", (event) => event.preventDefault());
     form.addEventListener("change", (event) => {
       syncExclusiveToggle(form);
-      syncNearbyToggle(form, event.target);
+      syncNearbyToggle(form, event.target, false);
       reflectFilters(form);
       syncCityLinks();
     });
     syncExclusiveToggle(form);
-    syncNearbyToggle(form, null);
+    syncNearbyToggle(form, null, false);
     reflectFilters(form);
   });
   // Carry any URL-restored filters into the city links on first paint, before
