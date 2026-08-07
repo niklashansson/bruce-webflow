@@ -28,7 +28,7 @@ shape:
 
 | visible switch | desired condition |
 | --- | --- |
-| off (default) | `nearby-enabled equal true` — metro only |
+| off (default) | `in-metro equal true` — metro only |
 | on | no condition — whole region |
 
 The condition must be active while the visible control is **off**, which one
@@ -37,8 +37,8 @@ inverted.
 
 ## Pre-existing defects this change fixes
 
-Both were found by reading the live Copenhagen page (`brucestudios.webflow.io`)
-during design.
+All were found by reading the live Copenhagen page (`brucestudios.webflow.io`)
+during design. The first two are already fixed in Webflow; the third is JS work.
 
 1. **The shipped toggle does the opposite of its label.** The input exists,
    already labelled "Show studios in nearby areas", but carries the Finsweet
@@ -46,23 +46,25 @@ during design.
    condition → whole region; checked → metro only. Checking a box that promises
    to *add* nearby areas *removes* them.
 
-2. **The field names do not match, so the filter matches nothing.** The input
-   declares `fs-list-field="in-metro"`, but every studio item emits
-   `fs-list-field="nearby-enabled"`. No element on the page carries an
-   `in-metro` field, so engaging the condition today yields zero results.
+2. **The field names did not match, so the filter matched nothing.** The input
+   declared `fs-list-field="in-metro"`, but every studio item emitted
+   `fs-list-field="nearby-enabled"`. No element on the page carried an
+   `in-metro` field, so engaging the condition yielded zero results.
 
-   **Resolution:** `nearby-enabled` wins — it is the name already bound on
-   ~1000 studio items, and changing the single input is the smaller edit. Per
-   the Webflow slug gotcha (Webflow derives slugs from display names and
-   silently ignores the requested slug), verify the live attribute rather than
-   assuming it.
+   **Resolved in Webflow: `in-metro` wins.** The studio items now emit
+   `<div fs-list-field="in-metro">true</div>` and the input is unchanged.
+   Verified live on `/studios/copenhagen`: the counter reads 202 against a
+   region total of 226, and pagination dropped from 10 pages to 9.
 
 Also confirmed while reading the page: the **native Webflow collection filter
-is gone** — the counter reads 226 against a metro count of ~202 — closing that
-open question. And `reflectFilters` currently counts the input harmlessly only
-because it is unchecked; the moment it defaults to checked it would pin
-`data-explorer-filtered` to `"true"` and permanently hide the discovery
-collections. See §"reflectFilters" below.
+is gone** — unfiltered, the counter reads 226 against a metro count of 202 —
+closing that open question.
+
+3. **`reflectFilters` counts the source input.** Latent while the input shipped
+   unchecked; live now that it defaults to checked. `.explorer_wrap` carries
+   `data-explorer-filtered="true"` and the form `data-has-filters="true"` on an
+   untouched page, so "Clear all" shows and the discovery section is suppressed
+   by state. See §"reflectFilters" below.
 
 ## Markup contract (Webflow)
 
@@ -79,10 +81,13 @@ Each copy carries a **pair**:
 </label>
 
 <!-- hidden condition input: keeps the fs-list-* attributes, ships checked -->
-<div class="u-display-none">
-  <input type="checkbox" checked aria-hidden="true" tabindex="-1"
-         data-explorer-element="nearby-source"
-         fs-list-field="nearby-enabled" fs-list-value="true">
+<div class="form_ui_item u-display-none">
+  <label class="form_ui_label">
+    <input type="checkbox" checked
+           data-explorer-element="nearby-source"
+           fs-list-field="in-metro" fs-list-value="true">
+    …spans…
+  </label>
 </div>
 ```
 
@@ -95,13 +100,12 @@ Notes:
   `.checked` on the visible input updates it correctly.
 - Both inputs must stay **inside the filters form** — Finsweet only reads
   inputs in that subtree.
-- `tabindex="-1"` + `aria-hidden="true"` keep the hidden input out of the tab
-  order and the accessibility tree.
+- No `tabindex="-1"` / `aria-hidden="true"` needed: `u-display-none` already
+  takes the hidden input out of both the tab order and the accessibility tree.
 
-**Verify before building on it:** that Finsweet binds an input inside a
-`display:none` wrapper. If it skips hidden inputs, fall back to sr-only
-clipping (`position:absolute; width:1px; height:1px; clip-path:inset(50%)`)
-so the input stays rendered, keeping `tabindex="-1"` and `aria-hidden="true"`.
+**Confirmed on the live page:** Finsweet binds an input inside a `display:none`
+wrapper. Its label picks up `fs-list-activeclass` (`is-active`) and the count
+drops to the metro figure, so no sr-only fallback is required.
 
 ## State model
 
@@ -124,7 +128,7 @@ row, mirroring the existing `data-explorer-exclusive`.
 Set in the HTML, not by JS, so there is no first-paint flash and no dependency
 on script timing:
 
-- `nearby-source` → `checked` → `nearby-enabled equal true` → metro only.
+- `nearby-source` → `checked` → `in-metro equal true` → metro only.
 - `nearby-toggle` → unchecked → reads "Show studios in nearby areas: off".
 
 ### Transitions
