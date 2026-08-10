@@ -1,0 +1,269 @@
+<style>
+  /* =====================================================================
+   EXPLORER — map, bottom sheet, filter chrome
+   State attrs on .explorer_wrap (set by explorer.js):
+     data-explorer-map = open|closed      data-explorer-map-ready = true
+     data-explorer-filtered = true|false  data-explorer-sheet = …
+     data-state = loading|filtering|ready|empty
+     data-explorer-exclusive-available = true|false   (membership selected?)
+     data-explorer-exclusive = true|false             (switch state)
+     data-explorer-membership = base|black|epic       (written, unused so far)
+   (.explorer_map_wrap height + .explorer_map_target inset live on the
+    Webflow classes — not here.)
+   ===================================================================== */
+
+  /* ---- Clusters (data-size set by JS; sm = base class) ---- */
+  .explorer_cluster_wrap[data-size='md'] {
+    min-width: 2.5rem;
+    height: 2.5rem;
+    padding: 0 0.625rem;
+  }
+  .explorer_cluster_wrap[data-size='lg'] {
+    min-width: 3rem;
+    height: 3rem;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+  }
+  .explorer_cluster_wrap[data-size='xl'] {
+    min-width: 3.5rem;
+    height: 3.5rem;
+    padding: 0 0.875rem;
+    font-size: 1.0625rem;
+  }
+
+  /* ---- Mapbox overrides (popup is our own DOM) ---- */
+  .mapboxgl-map {
+    font-family: var(--_typography---font--primary-family);
+  }
+  .mapboxgl-popup-close-button {
+    display: none;
+  }
+  .mapboxgl-popup-content {
+    background: transparent;
+    border-radius: 0;
+    padding: 0;
+  }
+
+  /* ---- Animations ---- */
+  @keyframes pulse {
+    from {
+      transform: scale(1);
+      opacity: 0.35;
+    }
+    to {
+      transform: scale(3);
+      opacity: 0;
+    }
+  }
+  @keyframes skeleton-animation {
+    from {
+      opacity: 0.6;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  /* =================== LAYOUT (toggled by data-explorer-map) =================== */
+
+  /* Discovery hides while filtering or when the map is open */
+  .explorer_wrap[data-explorer-filtered='true'] .explorer_discovery_wrap,
+  .explorer_wrap[data-explorer-map='open'] .explorer_discovery_wrap {
+    display: none;
+  }
+
+  /* Map hidden by default; full-width container when open */
+  .explorer_results_map {
+    display: none;
+  }
+  .explorer_wrap[data-explorer-map='open'] .explorer_results_contain {
+    max-width: var(--max-width--full);
+  }
+
+  /* Desktop list | sticky map */
+  @container (width >= 50em) {
+    .explorer_wrap[data-explorer-map='open'] .explorer_results_layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+      gap: var(--site--margin);
+    }
+    .explorer_wrap[data-explorer-map='open'] .explorer_results_map {
+      display: block;
+      position: sticky;
+      top: calc(var(--nav--height) + var(--site--margin));
+      height: calc(100svh - var(--nav--height) - var(--site--margin) * 2);
+    }
+  }
+
+  /* Mobile fullscreen map + sheet over it */
+  @container (width < 50em) {
+    .explorer_wrap[data-explorer-map='open'] .explorer_results_map {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 1000;
+      /*
+      height: calc(100svh - var(--nav--height));
+      top: var(--nav--height);
+      */
+    }
+    .explorer_wrap[data-explorer-map='open'] .explorer_sheet {
+      display: block;
+      z-index: 1010;
+    }
+  }
+
+  /* =================== BOTTOM SHEET (pure-web-bottom-sheet) =================== */
+  .explorer_sheet {
+    display: none;
+  } /*  shown only mobile + map open (above) */
+  bottom-sheet {
+    --snap-bottom: 10rem; /* peek */
+    --snap-middle: 50%; /* half */
+    --snap-top: 100%; /* full */
+    --sheet-max-height: calc(100svh - var(--nav--height-total) - var(--site--margin));
+    --sheet-background: var(--_theme---background);
+    --sheet-border-radius: 1rem;
+  }
+  bottom-sheet::part(sheet) {
+    box-shadow: 0 -12px 20px 0 color-mix(in srgb, currentColor 15%, transparent);
+  }
+  bottom-sheet::part(header) {
+    z-index: 1;
+  }
+  bottom-sheet [data-explorer-element='map-toggle'] {
+    display: none;
+  }
+
+  .explorer_filter_bar_mobile_dropdowns {
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+    scrollbar-width: none; /* Firefox, Safari 18.2+, Chromium 121+ */
+  }
+  .explorer_filter_bar_mobile_dropdowns::-webkit-scrollbar {
+    display: none; /* Older Safari and Chromium */
+  }
+
+  /* =================== MAP CHROME =================== */
+  /* Panels appear once the canvas has rendered */
+  .explorer_wrap:not([data-explorer-map-ready='true']) .explorer_map_panel {
+    display: none;
+  }
+
+  /* Loading spinner: visible while opening, gone once tiles render */
+  .explorer_wrap[data-explorer-map='open']:not([data-explorer-map-ready='true']) .explorer_map_spinner {
+    opacity: 1;
+  }
+
+  /* "Search this area" only after a pan (JS adds .is-active) */
+  [data-explorer-element='search-area'] {
+    display: none;
+  }
+  [data-explorer-element='search-area'].is-active {
+    display: inline-flex;
+  }
+
+  /* Locate feedback */
+  [data-explorer-locate-state='locating'] {
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  /* =================== FILTER CHROME =================== */
+  .explorer_filter_dropdown[data-has-filters='true'] .explorer_filter_active_wrap {
+    display: block;
+  }
+
+  .explorer_filter_dropdown:last-child .explorer_filter_dropdown_toggle_button {
+    border-top-right-radius: 100vw;
+    border-bottom-right-radius: 100vw;
+    padding-right: 1.5rem;
+  }
+  .explorer_filter_dropdown:last-child .explorer_filter_active_wrap {
+    margin-right: 0.875rem;
+  }
+
+  .explorer_wrap[data-explorer-filtered='false'] .explorer_results_clear {
+    display: none;
+  }
+
+  /* "Show exclusive to tier" is meaningless with no membership to be exclusive
+   TO: explorer.js force-unchecks the switch in that state (syncExclusiveToggle),
+   so leaving it visible gives a control that visibly springs back when flipped.
+   This takes the dead row out of the panel — the row carries its own
+   u-margin-top-2, so no orphan gap is left behind.
+   Matched via :has() rather than .form_ui_item alone so it can only ever catch
+   the row holding the switch, not other form rows. Gated on
+   html:not(.wf-design-mode) rather than overridden in DESIGNER ONLY below,
+   because re-showing it there would mean hard-coding a display value and
+   guessing .form_ui_item's authored one. */
+  html:not(.wf-design-mode)
+    .explorer_wrap[data-explorer-exclusive-available='false']
+    .form_ui_item:has([data-explorer-element='exclusive-toggle']) {
+    display: none;
+  }
+
+  /* Only the JS-activated mode shows — kills the "1 studio 0 studios Over 0" flash */
+  [data-explorer-count-mode] {
+    display: none;
+  }
+  [data-explorer-count-mode].is-active {
+    display: inline;
+  }
+
+  /* Loading (default): skeleton in, real count out */
+  .explorer_count_text {
+    opacity: 0;
+  }
+  .explorer_count_skeleton {
+    display: block;
+  }
+
+  /* Ready / empty: skeleton out, count in */
+  .explorer_wrap[data-state='ready'] .explorer_count_skeleton,
+  .explorer_wrap[data-state='empty'] .explorer_count_skeleton {
+    display: none;
+  }
+  .explorer_wrap[data-state='ready'] .explorer_count_text,
+  .explorer_wrap[data-state='empty'] .explorer_count_text {
+    opacity: 1;
+  }
+
+  /* Design mode = ready */
+  .wf-design-mode .explorer_count_skeleton {
+    display: none;
+  }
+  .wf-design-mode .explorer_count_text {
+    opacity: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .wf-design-mode [data-explorer-count-mode] {
+    display: inline;
+  }
+
+  /* =================== DESIGNER ONLY =================== */
+  /* Force JS/state-hidden chrome visible so its text stays editable/translatable.
+   Published site unaffected (relies on the .wf-design-mode class).
+   (The exclusive-switch row needs no entry here — its hide rule in FILTER
+   CHROME is itself gated on html:not(.wf-design-mode).) */
+  html.wf-design-mode .explorer_results_map {
+    display: block;
+  }
+  html.wf-design-mode .explorer_wrap:not([data-explorer-map='open']) .explorer_results_map {
+    aspect-ratio: 16/9;
+    margin-top: 2rem;
+  }
+  html.wf-design-mode .explorer_wrap .explorer_map_panel {
+    display: block;
+  } /* (0,3,1) beats the ready-gate */
+  html.wf-design-mode [data-explorer-element='search-area'] {
+    display: inline-flex;
+  }
+  html.wf-design-mode .explorer_map_spinner {
+    opacity: 1;
+  }
+  html.wf-design-mode .explorer_sheet {
+    display: block;
+  }
+</style>

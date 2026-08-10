@@ -242,28 +242,43 @@ function reflectFilters(form) {
 const MEMBERSHIP_RADIO = 'input[type="radio"][fs-list-field="tiers"]';
 
 function syncExclusiveToggle(form) {
-  const toggle = form.querySelector(S.exclusiveToggle);
-  if (!(toggle instanceof HTMLInputElement)) return;
+  // EVERY toggle in the form, not just the first. The shipped page renders the
+  // filter bar twice inside the single filters form — a desktop copy and a
+  // mobile copy — and only one is visible at a time. A singular querySelector
+  // here reached the desktop copy only: the mobile switch kept no
+  // fs-list-value, so Finsweet fell back to its raw Webflow `value` ("Value"),
+  // and `tier equal Value` matched no studio — the whole mobile layout filtered
+  // to zero results the moment the switch was flipped. Same reasoning (and the
+  // same mis-authoring guard) as syncNearbyToggle: the selector is a bare
+  // attribute match, and a pair landing on the wrapping <label> instead of the
+  // <input> must not put `.checked === undefined` into the logic below.
+  const toggles = [...form.querySelectorAll(S.exclusiveToggle)].filter(
+    (el) => el instanceof HTMLInputElement,
+  );
+  if (toggles.length === 0) return;
 
+  // All copies share one radio group (same `name`), so this finds the user's
+  // selection whichever copy they picked it in.
   const radio = form.querySelector(`${MEMBERSHIP_RADIO}:checked`);
-  const selected =
-    radio?.getAttribute("fs-list-value") ?? radio?.value ?? "";
+  const selected = radio?.getAttribute("fs-list-value") ?? radio?.value ?? "";
 
-  // No membership → no reference for "exclusive"; force the switch off via
-  // click (never .checked — that desyncs Finsweet and the Webflow visuals).
-  if (!selected && toggle.checked) toggle.click();
+  for (const toggle of toggles) {
+    // No membership → no reference for "exclusive"; force the switch off via
+    // click (never .checked — that desyncs Finsweet and the Webflow visuals).
+    if (!selected && toggle.checked) toggle.click();
 
-  // Rewrite + re-dispatch only when the value really changed. Finsweet
-  // re-reads the condition on the form's `fs-list-filteron` event, which
-  // DEFAULTS to "input" — a synthetic "change" alone is never heard and the
-  // stale tier would keep filtering. Dispatch both so the rewrite lands
-  // whichever event the form is authored with; our own form listener hears
-  // the "change", re-enters this function, and terminates on this equality
-  // check.
-  if (toggle.getAttribute("fs-list-value") !== selected) {
-    toggle.setAttribute("fs-list-value", selected);
-    toggle.dispatchEvent(new Event("input", { bubbles: true }));
-    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    // Rewrite + re-dispatch only when the value really changed. Finsweet
+    // re-reads the condition on the form's `fs-list-filteron` event, which
+    // DEFAULTS to "input" — a synthetic "change" alone is never heard and the
+    // stale tier would keep filtering. Dispatch both so the rewrite lands
+    // whichever event the form is authored with; our own form listener hears
+    // the "change", re-enters this function, and terminates on this equality
+    // check.
+    if (toggle.getAttribute("fs-list-value") !== selected) {
+      toggle.setAttribute("fs-list-value", selected);
+      toggle.dispatchEvent(new Event("input", { bubbles: true }));
+      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+    }
   }
 
   const wrap = form.closest(S.wrap);
@@ -271,8 +286,11 @@ function syncExclusiveToggle(form) {
     if (selected) wrap.dataset.explorerMembership = selected;
     else delete wrap.dataset.explorerMembership;
     wrap.dataset.explorerExclusiveAvailable = selected ? "true" : "false";
+    // Any copy being on means exclusive is engaged — the user only ever sees
+    // one of them, so reading the first alone left this stuck on "false" for
+    // the entire mobile layout.
     wrap.dataset.explorerExclusive =
-      selected && toggle.checked ? "true" : "false";
+      selected && toggles.some((el) => el.checked) ? "true" : "false";
   }
 }
 
