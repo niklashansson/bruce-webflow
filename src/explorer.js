@@ -241,6 +241,41 @@ function reflectFilters(form) {
 // Spec: docs/superpowers/specs/2026-07-06-explorer-membership-filter-design.md
 const MEMBERSHIP_RADIO = 'input[type="radio"][fs-list-field="tiers"]';
 
+// Finsweet re-reads a condition input on `input` (its `fs-list-filteron`
+// default) — but it does NOT act on one dispatched during its own render
+// cycle, and refreshFilterForms runs from the afterRender hook, which is
+// exactly that cycle.
+//
+// That is invisible on the paths where the user drives the input directly, and
+// fatal on the one where we drive it: a field-scoped membership clear
+// (`fs-list-element="clear" fs-list-field="tiers"`) does not touch the toggle's
+// own field (`tier`), so the force-off below is the only thing that retires the
+// stale `tier equal <membership>` condition. Its events landed mid-render and
+// were dropped, leaving the toggle unchecked and value-less in the DOM while
+// Finsweet kept filtering on the old membership — the list pinned to the
+// exclusive set until some later, unrelated interaction shook it loose.
+//
+// Handing the dispatch to a fresh task puts it outside the cycle, where it is
+// heard. The DOM half stays synchronous, so the equality guards below (and the
+// wrap dataset) still read true state on re-entry, and the page's 200ms
+// fs-list-debounce absorbs the extra tick — the direct radio-change path still
+// settles in a single render.
+//
+// The WeakSet collapses the duplicate that `.click()` would otherwise cause:
+// its native events bubble to our own form listener, which re-enters this
+// function synchronously, mid-loop.
+const pendingToggleNotify = new WeakSet();
+
+function notifyFinsweet(toggle) {
+  if (pendingToggleNotify.has(toggle)) return;
+  pendingToggleNotify.add(toggle);
+  setTimeout(() => {
+    pendingToggleNotify.delete(toggle);
+    toggle.dispatchEvent(new Event("input", { bubbles: true }));
+    toggle.dispatchEvent(new Event("change", { bubbles: true }));
+  }, 0);
+}
+
 function syncExclusiveToggle(form) {
   // EVERY toggle in the form, not just the first. The shipped page renders the
   // filter bar twice inside the single filters form — a desktop copy and a
@@ -263,22 +298,27 @@ function syncExclusiveToggle(form) {
   const selected = radio?.getAttribute("fs-list-value") ?? radio?.value ?? "";
 
   for (const toggle of toggles) {
+    let changed = false;
+
     // No membership → no reference for "exclusive"; force the switch off via
     // click (never .checked — that desyncs Finsweet and the Webflow visuals).
-    if (!selected && toggle.checked) toggle.click();
+    if (!selected && toggle.checked) {
+      toggle.click();
+      changed = true;
+    }
 
-    // Rewrite + re-dispatch only when the value really changed. Finsweet
-    // re-reads the condition on the form's `fs-list-filteron` event, which
-    // DEFAULTS to "input" — a synthetic "change" alone is never heard and the
-    // stale tier would keep filtering. Dispatch both so the rewrite lands
-    // whichever event the form is authored with; our own form listener hears
-    // the "change", re-enters this function, and terminates on this equality
-    // check.
+    // Rewrite only when the value really changed — our own form listener hears
+    // the notification below, re-enters this function, and terminates on this
+    // equality check.
     if (toggle.getAttribute("fs-list-value") !== selected) {
       toggle.setAttribute("fs-list-value", selected);
-      toggle.dispatchEvent(new Event("input", { bubbles: true }));
-      toggle.dispatchEvent(new Event("change", { bubbles: true }));
+      changed = true;
     }
+
+    // Both events, so the rewrite lands whichever one the form is authored
+    // with: a synthetic "change" alone is never heard under the "input"
+    // default. Deferred — see notifyFinsweet.
+    if (changed) notifyFinsweet(toggle);
   }
 
   const wrap = form.closest(S.wrap);

@@ -175,6 +175,36 @@ window.__toggles = () =>
     }),
   );
 
+// Every "input" a toggle emits, tagged with whether it fired inside the
+// synchronous call that provoked it or in a later task. Finsweet drops the
+// former when the provoking call is its own afterRender hook, so "async" is
+// the entry that proves the notification can actually be heard.
+window.__inputLog = [];
+window.__phase = "idle";
+document.addEventListener(
+  "input",
+  (e) => {
+    if (e.target.matches('[data-explorer-element="exclusive-toggle"]'))
+      window.__inputLog.push(window.__phase);
+  },
+  true,
+);
+
+// Finsweet's field-scoped clear on 'tiers' unchecks the radios WITHOUT firing
+// per-input events, then re-renders; explorer.js reacts from the afterRender
+// hook. This reproduces that shape: silent uncheck, then one form-level change.
+window.__simulateFieldClear = () => {
+  window.__inputLog = [];
+  window.__phase = "sync";
+  document
+    .querySelectorAll('input[fs-list-field="tiers"]')
+    .forEach((r) => (r.checked = false));
+  document
+    .querySelector('form[fs-list-element="filters"]')
+    .dispatchEvent(new Event("change", { bubbles: true }));
+  window.__phase = "async";
+};
+
 window.__wrapState = () => {
   const w = document.querySelector('[data-explorer-element="wrap"]');
   return {
@@ -334,6 +364,56 @@ try {
         document.getElementById("mobile-count").textContent,
       ]),
       ["1", "1"],
+    );
+    await page.close();
+  }
+  // ── 7. A field-scoped clear retires the stale condition ────────────
+  // Live regression: the membership clear is scoped to `tiers`, which does not
+  // touch the toggle's own field (`tier`), so this force-off is the only thing
+  // that retires `tier equal <membership>`. It ran inside Finsweet's afterRender
+  // cycle, which drops the events it fires — the DOM went clean while Finsweet
+  // kept filtering, pinning the list to the exclusive set. The notification has
+  // to reach a task of its own to be heard.
+  {
+    const page = await newPage();
+    await click(page, "mobile-epic");
+    await click(page, "mobile-toggle");
+    await page.evaluate(() => window.__simulateFieldClear());
+    await page.evaluate(() => window.__sleep(50));
+    check(
+      "7. a field-scoped clear leaves the toggles clean AND notifies out-of-cycle",
+      await page.evaluate(() => ({
+        toggles: window.__toggles(),
+        wrap: window.__wrapState(),
+        notifiedAsync: window.__inputLog.includes("async"),
+      })),
+      {
+        toggles: [
+          { id: "desktop-toggle", value: "", checked: false },
+          { id: "mobile-toggle", value: "", checked: false },
+        ],
+        wrap: { membership: null, available: "false", exclusive: "false" },
+        notifiedAsync: true,
+      },
+    );
+    await page.close();
+  }
+
+  // ── 8. The deferred notification still terminates ──────────────────
+  // The dispatch bubbles to our own form listener, which re-enters
+  // syncExclusiveToggle. Without the equality guards (and the WeakSet that
+  // collapses .click()'s duplicate) that is an unbounded event storm.
+  {
+    const page = await newPage();
+    await click(page, "mobile-epic");
+    await click(page, "mobile-toggle");
+    await page.evaluate(() => window.__simulateFieldClear());
+    await page.evaluate(() => window.__sleep(300));
+    const total = await page.evaluate(() => window.__inputLog.length);
+    check(
+      `8. the notification settles instead of looping (saw ${total} input events)`,
+      total > 0 && total < 10,
+      true,
     );
     await page.close();
   }
