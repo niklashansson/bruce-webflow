@@ -83,13 +83,18 @@ function apply(active, { force = false } = {}) {
 }
 
 // ── Resolve ──────────────────────────────────────────────────
-// Idempotent. Re-reads the registry (CMS may render late), recomputes the
-// var-key union, runs the chain, seeds the preference if applicable, applies.
 
-function resolve({ force = false } = {}) {
+/** Re-read the CMS registry (it may render late) and the var-key union. */
+function readRegistry() {
   cities = readCityList();
   knownVarKeys = new Set();
   for (const c of cities) for (const k of Object.keys(c.vars)) knownVarKeys.add(k);
+}
+
+// Idempotent. Re-reads the registry, runs the chain, seeds the preference if
+// applicable, applies.
+function resolve({ force = false } = {}) {
+  readRegistry();
 
   if (cities.length === 0) return; // nothing to resolve yet; safety pass retries
 
@@ -118,6 +123,12 @@ const api = {
   /** @param {string} slug  "" resets to neutral */
   set(slug) {
     const next = slug === "" ? null : slug;
+    if (next !== null && !cityBySlug(next)) {
+      // The CMS registry can render after boot, leaving `cities` empty. Re-read
+      // before rejecting, so a pick made in that window (a gateway picker card
+      // clicked before the first safety pass) is not silently dropped.
+      readRegistry();
+    }
     if (next !== null && !cityBySlug(next)) {
       console.warn(`[bruce.city] unknown city "${slug}" — ignoring`);
       return;

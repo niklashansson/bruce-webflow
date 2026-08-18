@@ -22,12 +22,30 @@ function syncActive(active) {
   });
 }
 
+/**
+ * Is this click headed somewhere? A switcher can also be a real link — a
+ * gateway city-picker card sets the city AND navigates to the destination
+ * (e.g. the autumn-campaign gateway → that city's country campaign page,
+ * which carries no data-city-lock of its own). Suppressing the default there
+ * would strand the visitor on the picker. Hash-only hrefs don't count: those
+ * are in-place switchers wearing a link's clothes.
+ */
+function navigates(target) {
+  const href = /** @type {Element|null} */ (target)
+    ?.closest?.("a[href]")
+    ?.getAttribute("href")
+    ?.trim();
+  return !!href && !href.startsWith("#");
+}
+
 function handle(e) {
   const trigger = /** @type {Element|null} */ (e.target)?.closest?.(
     "[data-set-city]",
   );
   if (!trigger) return;
-  e.preventDefault();
+  // writeSaved() inside set() is synchronous localStorage, so the pick is
+  // durable before the browser unloads the page.
+  if (!navigates(e.target)) e.preventDefault();
   /** @type {any} */ (window).bruce?.city?.set(
     trigger.getAttribute("data-set-city") ?? "",
   );

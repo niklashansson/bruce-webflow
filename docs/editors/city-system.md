@@ -53,6 +53,16 @@ none of these always shows.
 - **Switch in place** (on shared pages like the homepage): add
   `data-set-city="stockholm"` to a button. `data-set-city=""` clears it back
   to neutral. The active button gets `data-city-active="true"` for styling.
+- **Pick a city and go somewhere** (a gateway page that works as a city
+  picker): put `data-set-city="stockholm"` on the card *and* keep its normal
+  link. The click saves the city and follows the link — so the destination
+  gets the visitor's city even when it is not a city page. This is how the
+  campaign gateway hands a city to the per-country campaign page: the
+  Copenhagen card links to the Denmark page and sets `copenhagen`.
+
+  In a Collection List, bind the attribute to the city's **Slug** field so
+  each card carries its own city. A link to `#` still switches in place — the
+  city is only handed onward when the link actually goes somewhere.
 
 ## Placeholders you can type into text
 
