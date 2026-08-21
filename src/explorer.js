@@ -29,7 +29,12 @@
 //   close affordance is any element carrying data-explorer-element="map-toggle"
 //   inside the overlay/sheet (all toggles are bound).
 
-import { MAPBOX_STYLE, loadMapboxGl, loadScriptOnce } from "./mapbox.js";
+import {
+  cloneTemplate,
+  createMapRenderer,
+  extractFeatures,
+  extractOne,
+} from "./map-render.js";
 import { requestUserLocation } from "./location.js";
 import { planNearby } from "./nearby-plan.js";
 
@@ -44,16 +49,12 @@ const S = {
   // Map
   mapTarget: '[data-explorer-element="map-target"]',
   mapToggle: '[data-explorer-element="map-toggle"]',
-  marker: '[data-explorer-element="studio-marker"]',
-  popup: '[data-explorer-element="studio-popup"]',
+  // The per-item marker/popup/field selectors live in map-render.js now — the
+  // explorer only names the chrome it owns itself.
   clusterTemplate: '[data-explorer-element="cluster-template"]',
   userLocationTemplate: '[data-explorer-element="user-location-template"]',
   locate: '[data-explorer-element="locate"]',
   searchArea: '[data-explorer-element="search-area"]',
-  count: '[data-explorer-field="count"]',
-  lat: '[data-explorer-field="studio-lat"]',
-  lng: '[data-explorer-field="studio-lng"]',
-  id: '[data-explorer-field="studio-id"]',
   cityList: "[data-city-list]",
   // Mobile bottom-sheet (Step 6)
   sheet: '[data-explorer-element="sheet"]',
@@ -110,30 +111,14 @@ const FILTERING_DELAY_MS = 0;
 const NEARBY_CLEAR_FALLBACK_MS = 250;
 
 // ── Map config ───────────────────────────────────────────────
-// Fallback center if the page city has no coords in [data-city-list] (Oslo).
-const DEFAULT_CENTER = [10.7522, 59.9139];
-const DEFAULT_ZOOM = 11;
-const CITY_ZOOM = 11;
-const SINGLE_FEATURE_ZOOM = 13;
+// Marker/cluster/camera constants live in map-render.js; only the explorer's
+// own camera values stay here. DEFAULT_CENTER (Oslo) is the shared fallback
+// when [data-city-list] has no coords for the page city.
 const USER_LOCATION_ZOOM = 12;
-const FIT_BOUNDS_CONFIG = { duration: 500, maxZoom: 14, padding: 48 };
-const MARKER_FADE_DURATION = 250;
-const POPUP_CLASS = "explorer-popup";
+const FIT_BOUNDS_DURATION = 500;
 // dataset key → `data-explorer-map="open|closed"` on .explorer_wrap; CSS reads
 // it to show the map (desktop split / mobile overlay) and hide it otherwise.
 const MAP_MODE_KEY = "explorerMap";
-
-// Clustering. Supercluster is the only extra CDN dep beyond mapbox-gl; loaded
-// lazily alongside it on first map open and kept out of the Webflow <head> so
-// neither blocks first paint.
-const SUPERCLUSTER_JS_URL =
-  "https://unpkg.com/supercluster@8.0.0/dist/supercluster.min.js";
-// minPoints 6 → fewer than 6 nearby points stay as individual studio markers
-// rather than collapsing into a cluster bubble.
-const CLUSTER_CONFIG = { radius: 50, maxZoom: 14, minPoints: 6 };
-// Extra zoom beyond supercluster's expansionZoom so a cluster click lands a
-// touch past the break-apart point (avoids re-clustering into one bubble).
-const CLUSTER_EXPANSION_PADDING = 0.5;
 
 // ── Mobile bottom-sheet (Step 6) ─────────────────────────────
 // The pure-web-bottom-sheet custom element tag. Registered in the Webflow
@@ -533,120 +518,12 @@ function getPageCityCoords() {
   return [lng, lat];
 }
 
-// ── Map: feature extraction ──────────────────────────────────
-// CMS values are immutable post-render, so parsing each item once is safe; the
-// WeakMap auto-GCs when items leave the DOM.
-const featureCache = new WeakMap();
-
-function extractOne(el) {
-  if (featureCache.has(el)) return featureCache.get(el);
-
-  const latEl = el.querySelector(S.lat);
-  const lngEl = el.querySelector(S.lng);
-  const markerEl = el.querySelector(S.marker);
-  if (!latEl || !lngEl || !markerEl) {
-    featureCache.set(el, null);
-    return null;
-  }
-
-  const lat = parseFloat(latEl.textContent);
-  const lng = parseFloat(lngEl.textContent);
-  // 0,0 is the CMS "no coordinates" sentinel (Gulf of Guinea) — skip it so a
-  // studio without a location doesn't drop a marker off the African coast.
-  if (Number.isNaN(lat) || Number.isNaN(lng) || (lat === 0 && lng === 0)) {
-    featureCache.set(el, null);
-    return null;
-  }
-
-  const idEl = el.querySelector(S.id);
-  const feature = {
-    coordinates: [lng, lat],
-    id: idEl ? idEl.textContent.trim() : "",
-    markerEl,
-    popupEl: el.querySelector(S.popup),
-  };
-  featureCache.set(el, feature);
-  return feature;
-}
-
-let hasWarnedAboutSkipped = false;
-function extractFeatures(elements) {
-  const features = [];
-  let skipped = 0;
-  elements.forEach((el) => {
-    const one = extractOne(el);
-    if (one) features.push(one);
-    else skipped++;
-  });
-  if (skipped && !hasWarnedAboutSkipped) {
-    hasWarnedAboutSkipped = true;
-    console.warn(
-      `[explorer] Mapped ${features.length} / ${elements.length} items. Skipped ${skipped} with missing/invalid ${S.lat} / ${S.lng} / ${S.marker} (or 0,0 coords). Logged once per session.`,
-    );
-  }
-  return features;
-}
-
-// Deep-clones a per-item template (the in-card marker / popup). Cloning (vs
-// moving) keeps the CMS-bound source in the card intact and lets the same
-// element be rendered on the map repeatedly. Strips ids + the element hooks so
-// clones never match template queries.
-function cloneTemplate(sourceEl) {
-  if (!sourceEl) return null;
-  const clone = sourceEl.cloneNode(true);
-  if (clone instanceof HTMLElement) {
-    clone.style.display = "";
-    if (clone.id) clone.removeAttribute("id");
-    clone.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
-    clone.removeAttribute("data-explorer-element");
-    clone
-      .querySelectorAll("[data-explorer-element]")
-      .forEach((n) => n.removeAttribute("data-explorer-element"));
-  }
-  return clone;
-}
-
-function pointKey(feature) {
-  return feature.id || feature.coordinates.join(",");
-}
-
 // True when the wrap's inline size is below the split breakpoint, measured in
 // the wrap's OWN font-size (same basis CSS container queries use for em). Read
 // fresh each call so width / font-size changes are picked up without caching.
 function isMobileLayout(el) {
   const fontSize = parseFloat(getComputedStyle(el).fontSize) || 16;
   return el.clientWidth < LAYOUT_BREAKPOINT_EM * fontSize;
-}
-
-// Cluster bubble size tier → `data-size` on the cluster element. The Webflow
-// embed sizes md/lg/xl; sm falls back to the base .explorer_cluster_wrap style.
-function getClusterSizeTier(count) {
-  if (count < 10) return "sm";
-  if (count < 50) return "md";
-  if (count < 200) return "lg";
-  return "xl";
-}
-
-function applyClusterMeta(el, count, countSelector) {
-  if (!(el instanceof HTMLElement)) return;
-  el.dataset.size = getClusterSizeTier(count);
-  const slot = countSelector ? el.querySelector(countSelector) : null;
-  if (slot) slot.textContent = String(count);
-}
-
-// Loads mapbox-gl (via the shared loader) + supercluster on first call, caching
-// the promise so every caller awaits the same single load. Resolves with the
-// global `mapboxgl`; supercluster lands on `window.Supercluster`.
-let mapLibsPromise = null;
-function loadMapLibs() {
-  if (mapLibsPromise) return mapLibsPromise;
-  mapLibsPromise = Promise.all([
-    loadMapboxGl(),
-    window.Supercluster
-      ? Promise.resolve()
-      : loadScriptOnce(SUPERCLUSTER_JS_URL),
-  ]).then(([gl]) => gl);
-  return mapLibsPromise;
 }
 
 // ── Map controller ───────────────────────────────────────────
@@ -699,17 +576,7 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
   // once the element upgrades; null until then (and on desktop, where unused).
   let sheetChrome = null;
 
-  let mapboxgl = null;
-  let Supercluster = null;
-  let map = null;
-  let mapLoaded = false;
-  let mapInitStarted = false;
   let mapOpen = false;
-  let lastSignature = null;
-  let clusterIndex = null;
-  // Memoised viewport key (bbox + zoom) — skips re-clustering when neither moved.
-  let lastRenderKey = null;
-  let activePopup = null;
   let userLocationMarker = null;
   // A location resolved before the map finished loading; flushed on map load.
   let pendingUserLocation = null;
@@ -718,99 +585,6 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
   let searchAreaDirty = false;
   let boundsFilterPending = false;
   let boundsPassActive = false;
-  // Reused across renders so Mapbox can `setLngLat` markers (smooth) and CSS
-  // transitions animate on the same element instead of recreating nodes.
-  const pointMarkers = new Map(); // pointKey -> { marker, feature }
-  const clusterMarkers = new Map(); // cluster_id -> { marker, clusterId, coords }
-
-  function closePopup() {
-    if (activePopup) {
-      activePopup.remove();
-      activePopup = null;
-    }
-  }
-
-  function openPopup(feature) {
-    closePopup();
-    const content = cloneTemplate(feature.popupEl);
-    if (!content) return;
-    activePopup = new mapboxgl.Popup({
-      className: POPUP_CLASS,
-      closeButton: false,
-      closeOnClick: true,
-      maxWidth: "none",
-    })
-      .setLngLat(feature.coordinates)
-      .setDOMContent(content)
-      .addTo(map);
-    activePopup.on("close", () => {
-      activePopup = null;
-    });
-  }
-
-  // Mounts a DOM element as a Mapbox marker, fades it in, and wires a click.
-  function attachMarker(el, coords, onClick) {
-    const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
-      .setLngLat(coords)
-      .addTo(map);
-    // Opacity-only fade; animating transform would fight Mapbox's per-frame
-    // marker positioning during pan/zoom.
-    el.animate([{ opacity: 0 }, { opacity: 1 }], {
-      duration: MARKER_FADE_DURATION,
-      easing: "ease-out",
-    });
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onClick();
-    });
-    return marker;
-  }
-
-  function addPointMarker(feature) {
-    const el = cloneTemplate(feature.markerEl);
-    if (!el) return;
-    const entry = { feature };
-    entry.marker = attachMarker(el, feature.coordinates, () => {
-      openPopup(entry.feature);
-      map.flyTo({
-        center: entry.feature.coordinates,
-        speed: 0.6,
-        padding: bottomPad(),
-      });
-    });
-    pointMarkers.set(pointKey(feature), entry);
-  }
-
-  // A cluster bubble. Clicking zooms to the point where supercluster breaks the
-  // cluster apart (+ padding), so the studios underneath become visible.
-  function addClusterMarker(cluster) {
-    const el = cloneTemplate(clusterTemplateEl);
-    if (!el) return;
-    applyClusterMeta(el, cluster.properties.point_count, S.count);
-    const entry = {
-      clusterId: cluster.properties.cluster_id,
-      coords: cluster.geometry.coordinates,
-    };
-    entry.marker = attachMarker(el, entry.coords, () => {
-      const expansionZoom = clusterIndex.getClusterExpansionZoom(
-        entry.clusterId,
-      );
-      map.flyTo({
-        center: entry.coords,
-        zoom: expansionZoom + CLUSTER_EXPANSION_PADDING,
-        duration: FIT_BOUNDS_CONFIG.duration,
-        padding: bottomPad(),
-      });
-    });
-    clusterMarkers.set(entry.clusterId, entry);
-  }
-
-  function clearMarkers() {
-    clusterMarkers.forEach((e) => e.marker.remove());
-    clusterMarkers.clear();
-    pointMarkers.forEach((e) => e.marker.remove());
-    pointMarkers.clear();
-  }
 
   // How many CSS px of the map canvas the bottom-sheet currently covers. Used
   // as extra bottom padding on camera ops so the framed studios land in the
@@ -827,197 +601,30 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     return Math.min(Math.max(0, t.bottom - c.top), t.height);
   }
 
-  // Camera padding that keeps a fly-to's focal point in the strip ABOVE the
-  // sheet — the map's "active area" is what's visible, never the part the sheet
-  // covers. 0 on desktop / before the sheet upgrades, so it's a no-op there.
-  function bottomPad() {
-    return { top: 0, right: 0, left: 0, bottom: sheetCoverage() };
-  }
-
-  function fitToFeatures(features) {
-    if (!map) return;
-    const cov = sheetCoverage();
-    const pad = {
-      top: FIT_BOUNDS_CONFIG.padding,
-      right: FIT_BOUNDS_CONFIG.padding,
-      left: FIT_BOUNDS_CONFIG.padding,
-      bottom: FIT_BOUNDS_CONFIG.padding + cov,
-    };
-    const pts = features.map((f) => f.coordinates);
-    if (pts.length === 0) {
-      const c = getPageCityCoords();
-      if (c) {
-        map.flyTo({
-          center: c,
-          zoom: CITY_ZOOM,
-          duration: FIT_BOUNDS_CONFIG.duration,
-          padding: bottomPad(),
-        });
+  // The shared render engine owns the map instance, markers, popups, clusters
+  // and camera (see map-render.js). The explorer injects only what is specific
+  // to this surface: where to center, how much canvas the bottom-sheet hides,
+  // what a user pan means ("search this area" arms) and what to do once the
+  // first render lands (reveal the chrome, flush a queued geolocation fix).
+  const renderer = createMapRenderer({
+    targetEl: mapTargetEl,
+    getFeatures,
+    clusterTemplateEl,
+    getCenter: getPageCityCoords,
+    getBottomPad: sheetCoverage,
+    onUserMove: () => setSearchAreaDirty(true),
+    onReady: () => {
+      // Signal to CSS that the canvas has rendered — drives the spinner
+      // (hidden once ready) and the map chrome (revealed once ready). Set
+      // once; never unset, so reopening doesn't re-show the spinner.
+      wrap.dataset.explorerMapReady = "true";
+      // A locate fix that resolved during load.
+      if (pendingUserLocation) {
+        showUserLocation(pendingUserLocation);
+        pendingUserLocation = null;
       }
-      return;
-    }
-    if (pts.length === 1) {
-      map.flyTo({
-        center: pts[0],
-        zoom: SINGLE_FEATURE_ZOOM,
-        duration: FIT_BOUNDS_CONFIG.duration,
-        padding: bottomPad(),
-      });
-      return;
-    }
-    const bounds = pts.reduce(
-      (b, c) => b.extend(c),
-      new mapboxgl.LngLatBounds(),
-    );
-    map.fitBounds(bounds, {
-      padding: pad,
-      maxZoom: FIT_BOUNDS_CONFIG.maxZoom,
-      duration: FIT_BOUNDS_CONFIG.duration,
-    });
-  }
-
-  // (Re)builds the supercluster index from the current feature set. Clearing
-  // the markers here is required: cluster_ids are regenerated per index, so
-  // reusing stale clusters would wire markers to ids that no longer exist.
-  function rebuildIndex(features) {
-    if (features.length === 0) {
-      // Supercluster.load() throws on an empty array, which would reject the
-      // caller; represent "nothing to cluster" as a null index instead.
-      clusterIndex = null;
-    } else {
-      clusterIndex = new Supercluster(CLUSTER_CONFIG).load(
-        features.map((f) => ({
-          type: "Feature",
-          geometry: { type: "Point", coordinates: f.coordinates },
-          properties: { feature: f },
-        })),
-      );
-    }
-    lastRenderKey = null;
-    clearMarkers();
-  }
-
-  // Renders the clusters + points for the current viewport, upserting markers
-  // (move, don't recreate) and pruning any that left the view. Cheap to call on
-  // every moveend — the bbox+zoom key short-circuits when nothing changed.
-  function renderClusters() {
-    if (!mapLoaded || !clusterIndex) return;
-
-    const bbox = map.getBounds().toArray().flat();
-    const zoom = Math.floor(map.getZoom());
-    // Round bbox to ~11m so float jitter from programmatic camera ops doesn't
-    // bust the cache.
-    const renderKey = `${bbox.map((n) => n.toFixed(4)).join(",")}|${zoom}`;
-    if (renderKey === lastRenderKey) return;
-    lastRenderKey = renderKey;
-
-    const seenClusters = new Set();
-    const seenPoints = new Set();
-
-    clusterIndex.getClusters(bbox, zoom).forEach((item) => {
-      if (item.properties.cluster) {
-        const id = item.properties.cluster_id;
-        seenClusters.add(id);
-        const existing = clusterMarkers.get(id);
-        if (existing) {
-          existing.marker.setLngLat(item.geometry.coordinates);
-          existing.coords = item.geometry.coordinates;
-          applyClusterMeta(
-            existing.marker.getElement(),
-            item.properties.point_count,
-            S.count,
-          );
-        } else {
-          addClusterMarker(item);
-        }
-      } else {
-        const feature = item.properties.feature;
-        const id = pointKey(feature);
-        seenPoints.add(id);
-        const existing = pointMarkers.get(id);
-        if (existing) {
-          existing.marker.setLngLat(feature.coordinates);
-          existing.feature = feature;
-        } else {
-          addPointMarker(feature);
-        }
-      }
-    });
-
-    clusterMarkers.forEach((entry, id) => {
-      if (seenClusters.has(id)) return;
-      entry.marker.remove();
-      clusterMarkers.delete(id);
-    });
-    pointMarkers.forEach((entry, id) => {
-      if (seenPoints.has(id)) return;
-      entry.marker.remove();
-      pointMarkers.delete(id);
-    });
-  }
-
-  // Rebuilds the index + reframes the camera only when the feature set actually
-  // changed (so a pagination click, which re-fires afterRender with the same
-  // set, never yanks the view). Viewport-only changes go through renderClusters.
-  function render(features, { fit = false } = {}) {
-    if (!mapLoaded || !map) return;
-    const signature = features.map(pointKey).join("|");
-    const changed = signature !== lastSignature;
-    if (!changed) return;
-    lastSignature = signature;
-
-    closePopup();
-    rebuildIndex(features);
-    renderClusters();
-    if (fit) fitToFeatures(features);
-  }
-
-  // Lazily build the map on first open: load the CDN libs, create the map
-  // centered on the page city, then render whatever features are loaded. Runs
-  // at most once. The container is visible by now (the open attribute is set
-  // before this), so Mapbox sizes its canvas correctly.
-  function ensureMap() {
-    if (mapInitStarted || !mapTargetEl) return;
-    mapInitStarted = true;
-    loadMapLibs()
-      .then((gl) => {
-        mapboxgl = gl;
-        Supercluster = window.Supercluster;
-        map = new mapboxgl.Map({
-          container: mapTargetEl,
-          style: MAPBOX_STYLE,
-          projection: "globe",
-          center: getPageCityCoords() || DEFAULT_CENTER,
-          zoom: DEFAULT_ZOOM,
-          attributionControl: false,
-        });
-        map.addControl(new mapboxgl.AttributionControl({ compact: true }));
-        // The container is toggled (display:none ↔ visible) and reflows between
-        // the desktop split and mobile overlay; keep the canvas sized to it.
-        new ResizeObserver(() => map && map.resize()).observe(mapTargetEl);
-        map.on("load", () => {
-          mapLoaded = true;
-          // Signal to CSS that the canvas has rendered — drives the spinner
-          // (hidden once ready) and the map chrome (revealed once ready). Set
-          // once; never unset, so reopening doesn't re-show the spinner.
-          wrap.dataset.explorerMapReady = "true";
-          render(getFeatures(), { fit: true });
-          // A locate fix that resolved during load.
-          if (pendingUserLocation) {
-            showUserLocation(pendingUserLocation);
-            pendingUserLocation = null;
-          }
-        });
-        // Re-cluster as the user pans / zooms. `originalEvent` is only present
-        // on user-driven moves (pan/pinch/wheel) — programmatic flyTo/fitBounds
-        // don't carry it — so we only arm "search this area" on real interaction.
-        map.on("moveend", (e) => {
-          renderClusters();
-          if (e.originalEvent) setSearchAreaDirty(true);
-        });
-      })
-      .catch((err) => console.error("[explorer] map failed to load", err));
-  }
+    },
+  });
 
   // ── Locate ───────────────────────────────────────────────────
   // State mirrored across every locate button (toolbar + map panel) via
@@ -1035,24 +642,27 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     }
     const el = cloneTemplate(userLocationTemplateEl);
     if (!el) return;
-    userLocationMarker = new mapboxgl.Marker({ element: el, anchor: "center" })
+    userLocationMarker = new renderer.mapboxgl.Marker({
+      element: el,
+      anchor: "center",
+    })
       .setLngLat(loc)
-      .addTo(map);
+      .addTo(renderer.map);
   }
 
   // Drops/moves the user-location marker and flies to it. Queues until the map
   // has loaded (geolocation can resolve before the lazy map finishes).
   function showUserLocation(loc) {
     if (!loc) return;
-    if (!mapLoaded || !map) {
+    if (!renderer.isLoaded()) {
       pendingUserLocation = loc;
       return;
     }
     setUserLocationMarker(loc);
-    map.flyTo({
+    renderer.map.flyTo({
       center: loc,
       zoom: USER_LOCATION_ZOOM,
-      duration: FIT_BOUNDS_CONFIG.duration,
+      duration: FIT_BOUNDS_DURATION,
       padding: { top: 0, right: 0, left: 0, bottom: sheetCoverage() },
     });
   }
@@ -1082,7 +692,7 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
   // The filter hook (in the instance) calls back into `filterToBounds`.
   searchAreaEls.forEach((btn) => {
     btn.addEventListener("click", () => {
-      if (!mapLoaded || !map || typeof requestFilter !== "function") return;
+      if (!renderer.isLoaded() || typeof requestFilter !== "function") return;
       boundsFilterPending = true;
       requestFilter();
       setSearchAreaDirty(false);
@@ -1172,10 +782,10 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     placeFilterBar();
     applyScrollLock();
     if (!open) return;
-    ensureMap();
-    if (map) requestAnimationFrame(() => map.resize());
+    renderer.ensureMap();
+    if (renderer.map) requestAnimationFrame(() => renderer.map.resize());
     // Reopening after a filter change while closed → catch the map up.
-    if (mapLoaded) render(getFeatures(), { fit: true });
+    if (renderer.isLoaded()) renderer.render(getFeatures(), { fit: true });
   }
 
   toggleEls.forEach((el) =>
@@ -1209,7 +819,7 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     placeResults();
     placeFilterBar();
     applyScrollLock();
-    if (map) map.resize();
+    if (renderer.map) renderer.map.resize();
   }).observe(wrap);
 
   initSheetMetrics();
@@ -1222,15 +832,15 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
     // Skipped on a "search this area" pass — that only narrows the list; the
     // markers + camera stay put on the view the user just searched.
     refresh: (features) => {
-      if (mapOpen) render(features, { fit: true });
+      if (mapOpen) renderer.render(features, { fit: true });
     },
     // One-shot: when a search-area click armed it, narrow `items` to the current
     // map viewport. Otherwise pass through untouched.
     filterToBounds: (items) => {
-      if (!boundsFilterPending || !mapLoaded || !map) return items;
+      if (!boundsFilterPending || !renderer.isLoaded()) return items;
       boundsFilterPending = false;
       boundsPassActive = true;
-      const bounds = map.getBounds();
+      const bounds = renderer.map.getBounds();
       return items.filter((item) => {
         const f = extractOne(item.element);
         return !f || bounds.contains(f.coordinates);
