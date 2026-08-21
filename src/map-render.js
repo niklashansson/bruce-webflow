@@ -148,7 +148,7 @@ function applyClusterMeta(el, count, countSelector) {
 }
 
 // Supercluster loads at most once per session, memoised independently of
-// mapbox-gl so a future non-clustering caller can skip it.
+// mapbox-gl so a non-clustering caller can skip it entirely.
 let superclusterPromise = null;
 function loadSupercluster() {
   if (superclusterPromise) return superclusterPromise;
@@ -163,7 +163,7 @@ function loadSupercluster() {
 //
 //   targetEl          the map container
 //   getFeatures       () => feature[]   read on first load
-//   clusterTemplateEl the cluster bubble source
+//   clusterTemplateEl the cluster bubble source; omit it for points-only
 //   getCenter         () => [lng, lat] | null   initial + empty-set camera
 //   getBottomPad      () => px of canvas hidden behind an overlay (default 0)
 //   onUserMove        called on a user-driven (not programmatic) moveend
@@ -177,6 +177,11 @@ export function createMapRenderer({
   onUserMove = () => {},
   onReady = () => {},
 } = {}) {
+  // Clustering is opt-in, decided by the markup: a caller that authored no
+  // cluster bubble gets individual point markers and never pays the
+  // supercluster fetch.
+  const clustering = Boolean(clusterTemplateEl);
+
   let mapboxgl = null;
   let Supercluster = null;
   let map = null;
@@ -409,6 +414,29 @@ export function createMapRenderer({
     });
   }
 
+  // The points-only counterpart to renderClusters: every feature is a marker,
+  // regardless of viewport, upserted so re-renders move markers instead of
+  // recreating them.
+  function renderPoints(features) {
+    const seen = new Set();
+    features.forEach((feature) => {
+      const id = pointKey(feature);
+      seen.add(id);
+      const existing = pointMarkers.get(id);
+      if (existing) {
+        existing.marker.setLngLat(feature.coordinates);
+        existing.feature = feature;
+      } else {
+        addPointMarker(feature);
+      }
+    });
+    pointMarkers.forEach((entry, id) => {
+      if (seen.has(id)) return;
+      entry.marker.remove();
+      pointMarkers.delete(id);
+    });
+  }
+
   // Rebuilds the index + reframes the camera only when the feature set actually
   // changed (so a pagination click, which re-fires afterRender with the same
   // set, never yanks the view). Viewport-only changes go through renderClusters.
@@ -420,8 +448,12 @@ export function createMapRenderer({
     lastSignature = signature;
 
     closePopup();
-    rebuildIndex(features);
-    renderClusters();
+    if (clustering) {
+      rebuildIndex(features);
+      renderClusters();
+    } else {
+      renderPoints(features);
+    }
     if (fit) fitToFeatures(features);
   }
 
@@ -431,10 +463,10 @@ export function createMapRenderer({
   function ensureMap() {
     if (mapInitStarted || !targetEl) return;
     mapInitStarted = true;
-    Promise.all([loadMapboxGl(), loadSupercluster()])
+    Promise.all([loadMapboxGl(), clustering ? loadSupercluster() : null])
       .then(([gl]) => {
         mapboxgl = gl;
-        Supercluster = window.Supercluster;
+        if (clustering) Supercluster = window.Supercluster;
         map = new mapboxgl.Map({
           container: targetEl,
           style: MAPBOX_STYLE,
@@ -458,8 +490,10 @@ export function createMapRenderer({
         // Re-cluster as the user pans / zooms. `originalEvent` is only present
         // on user-driven moves (pan/pinch/wheel) — programmatic flyTo/fitBounds
         // don't carry it — so callers only see real interaction.
+        // Only a clustered map re-renders on move — a points-only map already
+        // has every marker down, so panning changes nothing.
         map.on("moveend", (e) => {
-          renderClusters();
+          if (clustering) renderClusters();
           if (e.originalEvent) onUserMove();
         });
       })

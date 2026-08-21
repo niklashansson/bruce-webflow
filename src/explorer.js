@@ -552,7 +552,7 @@ function setupMap(wrap, getFeatures, { requestFilter } = {}) {
 
   if (!clusterTemplateEl) {
     console.warn(
-      `[explorer] Missing ${S.clusterTemplate} — clusters can't render. Points will still drop individually.`,
+      `[explorer] Missing ${S.clusterTemplate} — clustering is off for this page and every studio will drop its own pin. The explorer is meant to cluster; add data-explorer-element="cluster-template" unless that is deliberate.`,
     );
   }
 
