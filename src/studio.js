@@ -9,6 +9,7 @@
 // map container, so it's safe to ship site-wide.
 
 import { MAPBOX_STYLE, loadMapboxGl, whenIdle } from "./mapbox.js";
+import { directionsHref } from "./directions.js";
 
 const S = {
   component: '[data-studio-element="component"]',
@@ -42,49 +43,18 @@ function readCoords(component) {
   return [lng, lat];
 }
 
-// True on iOS / iPadOS / macOS — those route to Apple Maps, everything else
-// (Android, Windows, Linux, Chrome OS) to Google Maps. Prefers the modern
-// User-Agent Client Hints platform where the browser exposes it (Chromium),
-// and falls back to the UA string for Safari/Firefox and Chrome-on-iOS, which
-// don't implement userAgentData. iPadOS 13+ and Chrome-iOS both surface via
-// the "iPad"/"Macintosh"/"iPhone" UA tokens, all of which we want → Apple.
-function isApplePlatform() {
-  const platform = navigator.userAgentData?.platform;
-  if (platform) {
-    const p = platform.toLowerCase();
-    return p === "macos" || p === "ios";
-  }
-  return /iPhone|iPad|iPod|Macintosh|Mac OS X/.test(navigator.userAgent);
-}
-
-// Builds a cross-platform "directions to here" URL using https universal links
-// (not geo:/maps: schemes), so they open the native app when installed and
-// gracefully fall back to web. Neither needs an origin — both apps fill in
-// "from current location" themselves, so no geolocation permission is asked.
-// `name` is used only as Apple's pin label (its `q` param doubles as a label
-// when the destination is given as coords); Google has no coord-label param
-// without a Place ID, so it shows its own resolved label.
-function buildDirectionsUrl(coords, name) {
-  const [lng, lat] = coords;
-  const destination = `${lat},${lng}`;
-  if (isApplePlatform()) {
-    const params = new URLSearchParams({ daddr: destination, dirflg: "d" });
-    if (name) params.set("q", name);
-    return `https://maps.apple.com/?${params}`;
-  }
-  const params = new URLSearchParams({ api: "1", destination });
-  return `https://www.google.com/maps/dir/?${params}`;
-}
-
 // Points every authored directions link at the studio. Multiple copies are
-// expected (e.g. a desktop and a mobile button), so set them all. Sets the
+// expected (e.g. a desktop and a mobile button), so set them all. Provider
+// resolution (Apple/Google/Waze, stored preference) is shared with the
+// attribute-driven [data-directions] links via ./directions.js. Sets the
 // href attribute (not just the .href property) so it works on any element and
 // keeps native middle-click / right-click / accessibility intact.
 function setupDirectionsLinks(component, coords) {
   const links = component.querySelectorAll(S.directions);
   if (!links.length) return;
-  const name = component.querySelector(S.name)?.textContent.trim() || "";
-  const url = buildDirectionsUrl(coords, name);
+  const name = component.querySelector(S.name)?.textContent.trim() || undefined;
+  const [lng, lat] = coords;
+  const url = directionsHref({ lat, lng, name });
   links.forEach((link) => link.setAttribute("href", url));
 }
 
