@@ -110,8 +110,10 @@ export function extractFeatures(elements) {
 
 // Deep-clones a per-item template (the in-card marker / popup). Cloning (vs
 // moving) keeps the CMS-bound source in the card intact and lets the same
-// element be rendered on the map repeatedly. Strips ids + the element hooks so
-// clones never match template queries.
+// element be rendered on the map repeatedly. Strips ids + BOTH element-hook
+// namespaces so a clone can never match a template query — and, just as
+// importantly, so hiding the source template by its hook in Designer does not
+// also hide every clone that was rendered from it.
 export function cloneTemplate(sourceEl) {
   if (!sourceEl) return null;
   const clone = sourceEl.cloneNode(true);
@@ -119,10 +121,12 @@ export function cloneTemplate(sourceEl) {
     clone.style.display = "";
     if (clone.id) clone.removeAttribute("id");
     clone.querySelectorAll("[id]").forEach((n) => n.removeAttribute("id"));
-    clone.removeAttribute("data-explorer-element");
-    clone
-      .querySelectorAll("[data-explorer-element]")
-      .forEach((n) => n.removeAttribute("data-explorer-element"));
+    for (const hook of ["data-explorer-element", "data-map-element"]) {
+      clone.removeAttribute(hook);
+      clone
+        .querySelectorAll(`[${hook}]`)
+        .forEach((n) => n.removeAttribute(hook));
+    }
   }
   return clone;
 }

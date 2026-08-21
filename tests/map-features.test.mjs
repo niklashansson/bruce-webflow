@@ -10,8 +10,9 @@
 //   extractFeatures  — which CMS items become map features, and which are
 //                      dropped (missing fields, unparseable or 0,0 coords)
 //   cloneTemplate    — the marker/popup clone is detached from the source card
-//                      and stripped of ids + [data-explorer-element] hooks, so
-//                      a clone on the map can never match a template query
+//                      and stripped of ids + BOTH hook namespaces, so a clone on
+//                      the map can never match a template query, and hiding a
+//                      template in Designer can't hide its clones
 //   pointKey         — the stable marker identity used to move (not recreate)
 //                      markers across renders
 //   getClusterSizeTier — the count → `data-size` bucketing the Webflow embed
@@ -138,7 +139,8 @@ function card(id, attrs) {
     ${
       marker
         ? `<div data-explorer-element="studio-marker" id="${id}-marker" style="display:none">
-             <span data-explorer-element="studio-marker-inner" id="${id}-inner">pin</span>
+             <span data-explorer-element="studio-marker-inner"
+                   data-map-element="nested-hook" id="${id}-inner">pin</span>
            </div>`
         : ""
     }
@@ -188,6 +190,10 @@ window.__clone = () => {
     innerHasId: Boolean(clone.querySelector("[id]")),
     hasHook: clone.hasAttribute("data-explorer-element"),
     innerHasHook: Boolean(clone.querySelector("[data-explorer-element]")),
+    // The other hook namespace must go too: a cluster template is found by
+    // data-map-element, and a clone that kept it would be hidden by whatever
+    // CSS hides the template.
+    innerHasMapHook: Boolean(clone.querySelector("[data-map-element]")),
     // The source card must be untouched — it is still CMS-bound content.
     sourceStillInCard: document.getElementById("ok-marker") !== null,
     sourceStillHidden:
@@ -334,6 +340,7 @@ try {
         innerHasId: false,
         hasHook: false,
         innerHasHook: false,
+        innerHasMapHook: false,
         sourceStillInCard: true,
         sourceStillHidden: true,
         templateQueryCount: 5, // the five authored markers, never the clone
