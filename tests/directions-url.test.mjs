@@ -7,6 +7,7 @@ import {
   isApplePlatform,
   buildDirectionsUrl,
   parseCoords,
+  normalizeMode,
 } from "../src/directions-url.js";
 
 let passed = 0;
@@ -66,6 +67,23 @@ check(
   buildDirectionsUrl("google", { lat: -33.9, lng: 151.2 }),
   "https://www.google.com/maps/dir/?api=1&destination=-33.9%2C151.2",
 );
+
+// ── place mode ───────────────────────────────────────────────
+const place = { mode: "place" };
+check(
+  "apple place with label",
+  buildDirectionsUrl("apple", dest, place),
+  "https://maps.apple.com/?ll=55.6%2C13&q=Bruce+Malm%C3%B6",
+);
+check(
+  "google place",
+  buildDirectionsUrl("google", dest, place),
+  "https://www.google.com/maps/search/?api=1&query=55.6%2C13",
+);
+check("waze place (no navigate)", buildDirectionsUrl("waze", dest, place), "https://waze.com/ul?ll=55.6%2C13");
+check("normalizeMode place", normalizeMode(" Place "), "place");
+check("normalizeMode default", normalizeMode("route"), "directions");
+check("normalizeMode null", normalizeMode(null), "directions");
 
 // ── parseCoords ──────────────────────────────────────────────
 check("parses strings", parseCoords("55.6", " 13.0 "), { lat: 55.6, lng: 13 });

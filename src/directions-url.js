@@ -64,29 +64,50 @@ export function isApplePlatform(nav) {
  * otherwise. No origin is passed — every provider fills in "from current
  * location" itself, so the page never has to ask for geolocation.
  *
+ * `mode` "directions" (default) starts a route to the destination; "place"
+ * just drops a pin on it (no "from here", no route UI) — right for an
+ * address people want to look at rather than navigate to.
+ *
  * `name` is used only where the provider supports a coord label (Apple's `q`).
  *
  * @param {"apple" | "google" | "waze"} provider
  * @param {{lat: number, lng: number, name?: string}} dest
+ * @param {{mode?: "directions" | "place"}} [opts]
  * @returns {string}
  */
-export function buildDirectionsUrl(provider, { lat, lng, name }) {
-  const destination = `${lat},${lng}`;
+export function buildDirectionsUrl(provider, { lat, lng, name }, { mode = "directions" } = {}) {
+  const ll = `${lat},${lng}`;
+  const place = mode === "place";
   switch (provider) {
     case "apple": {
-      const params = new URLSearchParams({ daddr: destination, dirflg: "d" });
+      const params = place
+        ? new URLSearchParams({ ll })
+        : new URLSearchParams({ daddr: ll, dirflg: "d" });
       if (name) params.set("q", name);
       return `https://maps.apple.com/?${params}`;
     }
     case "waze": {
-      const params = new URLSearchParams({ ll: destination, navigate: "yes" });
+      const params = new URLSearchParams({ ll });
+      if (!place) params.set("navigate", "yes");
       return `https://waze.com/ul?${params}`;
     }
     default: {
-      const params = new URLSearchParams({ api: "1", destination });
+      if (place) {
+        const params = new URLSearchParams({ api: "1", query: ll });
+        return `https://www.google.com/maps/search/?${params}`;
+      }
+      const params = new URLSearchParams({ api: "1", destination: ll });
       return `https://www.google.com/maps/dir/?${params}`;
     }
   }
+}
+
+/**
+ * @param {string | null | undefined} value
+ * @returns {"directions" | "place"}
+ */
+export function normalizeMode(value) {
+  return (value || "").trim().toLowerCase() === "place" ? "place" : "directions";
 }
 
 /**

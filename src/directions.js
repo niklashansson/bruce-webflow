@@ -17,6 +17,9 @@
  *
  * Optional per-link attributes:
  *   - data-directions-provider="apple|google|waze"  force a provider
+ *   - data-directions-mode="place"                  open a pin on the location
+ *                                                   instead of a route from
+ *                                                   the visitor's position
  *
  * Optional chooser (any clickable element):
  *   <button data-directions-choose="apple">Apple Maps</button>
@@ -36,6 +39,7 @@ import {
   buildDirectionsUrl,
   parseCoords,
   normalizeProvider,
+  normalizeMode,
 } from "./directions-url.js";
 
 const LINK = "[data-directions]";
@@ -65,16 +69,16 @@ function writeStoredProvider(provider) {
  * exact same resolution rules as attribute-driven links.
  *
  * @param {{lat: number, lng: number, name?: string}} dest
- * @param {{provider?: string | null}} [opts]
+ * @param {{provider?: string | null, mode?: string | null}} [opts]
  * @returns {string}
  */
-export function directionsHref(dest, { provider } = {}) {
+export function directionsHref(dest, { provider, mode } = {}) {
   const resolved = resolveProvider({
     override: provider,
     stored: readStoredProvider(),
     isApple: isApplePlatform(navigator),
   });
-  return buildDirectionsUrl(resolved, dest);
+  return buildDirectionsUrl(resolved, dest, { mode: normalizeMode(mode) });
 }
 
 /**
@@ -95,7 +99,8 @@ function upgradeLink(link) {
   if (!coords) return;
   const name = link.getAttribute("data-directions-name") || undefined;
   const provider = link.getAttribute("data-directions-provider");
-  link.setAttribute("href", directionsHref({ ...coords, name }, { provider }));
+  const mode = link.getAttribute("data-directions-mode");
+  link.setAttribute("href", directionsHref({ ...coords, name }, { provider, mode }));
 }
 
 function setupChooser() {

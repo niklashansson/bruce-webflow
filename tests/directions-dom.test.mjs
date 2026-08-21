@@ -45,6 +45,8 @@ const HTML = `<!doctype html><meta charset="utf-8">
 <a id="b" href="#" data-directions data-directions-provider="waze"
    data-directions-lat="55.6" data-directions-lng="13.0">B</a>
 <a id="c" href="https://example.com/keep" data-directions data-directions-lat="oops" data-directions-lng="13.0">C</a>
+<a id="p" href="#" data-directions data-directions-mode="place"
+   data-directions-lat="55.6" data-directions-lng="13.0" data-directions-name="Bruce">P</a>
 <button id="choose" data-directions-choose="apple">Apple</button>
 <div id="host"></div>
 <script type="module" src="/directions.js"></script>`;
@@ -71,11 +73,13 @@ try {
 
   check("platform default (Google) rewrites href", await href("a"), "https://www.google.com/maps/dir/?api=1&destination=55.6%2C13");
   check("per-link provider override", await href("b"), "https://waze.com/ul?ll=55.6%2C13&navigate=yes");
+  check("place mode (Google)", await href("p"), "https://www.google.com/maps/search/?api=1&query=55.6%2C13");
   check("invalid coords leave authored href", await href("c"), "https://example.com/keep");
 
   await page.click("#choose");
   check("chooser stores + re-upgrades", await href("a"), "https://maps.apple.com/?daddr=55.6%2C13&dirflg=d&q=Bruce+Malm%C3%B6");
   check("override still wins after choice", await href("b"), "https://waze.com/ul?ll=55.6%2C13&navigate=yes");
+  check("place mode follows chosen provider", await href("p"), "https://maps.apple.com/?ll=55.6%2C13&q=Bruce");
   check("preference persisted", await page.evaluate(() => localStorage.getItem("bruce:mapProvider")), "apple");
 
   await page.evaluate(() => {
