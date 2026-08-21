@@ -4,8 +4,8 @@
   "description": "",
   "scripts": {
     "test": "for f in tests/*.test.mjs; do node \"$f\" || exit 1; done",
-    "build": "parcel build src/index.js src/studio.js src/explorer.js src/explore-map.js --dist-dir dist",
-    "start": "parcel src/index.js src/studio.js src/explorer.js src/explore-map.js"
+    "build": "parcel build src/index.js src/studio.js src/explorer.js --dist-dir dist",
+    "start": "parcel src/index.js src/studio.js src/explorer.js"
   },
   "keywords": [],
   "author": "",

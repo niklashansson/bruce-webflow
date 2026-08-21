@@ -7,18 +7,20 @@
 // for a live list — the state machine, the count display, the filter chrome, the
 // bottom-sheet, locate, "search this area" — is absent by design.
 //
-// The heavy lifting is the shared engine in map-render.js. This file is its OWN
-// parcel entry (dist/explore-map.js), like studio.js and explorer.js, rather
-// than part of index.js — add its <script> only to pages carrying the section,
-// and pages without one pay nothing. That also keeps every filename stable:
-// bundling it into index.js would need a dynamic import, and parcel names async
-// chunks with a content hash, so any later change to map-render.js would 404 for
-// the visitors still holding a cached index.js (jsDelivr serves these with
-// max-age=604800 — a full week).
+// The heavy lifting is the shared engine in map-render.js, STATICALLY imported
+// and bundled into index.js so the section works on any page the moment it is
+// authored — no per-page <script> to remember, and forgetting one can't leave a
+// dead map behind. That costs every page ~7.8 kB (index.js 41.6 -> 49.4 kB).
 //
-// Mapbox GL is still lazy: the engine only fetches it once a section actually
-// approaches the viewport, so a page with the section below the fold does not
-// pay for the map until the visitor scrolls near it.
+// Static is deliberate. Bundling it lazily would mean a dynamic import, parcel
+// names async chunks with a content hash, and jsDelivr serves our bundles with
+// max-age=604800 — so any later change to map-render.js would 404 the old chunk
+// for visitors holding a week-old cached index.js, silently killing the section.
+// A static import has no chunk to miss.
+//
+// The expensive part stays lazy anyway: mapbox-gl (~460 kB) and supercluster are
+// only fetched once a section actually approaches the viewport, so a page
+// without the section — or with it below the fold — never loads them.
 //
 // Markup contract:
 //   [data-map-element="wrap"]             the section (one renderer per wrap)
