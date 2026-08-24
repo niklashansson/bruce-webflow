@@ -14,6 +14,7 @@ import "./clean-link-params.js";
 import "./location.js";
 import "./directions.js";
 import "./intercom.js";
+import "./alert-window.js";
 import "./explore-map.js";
 import "./slider.js";
 import "./tab.js";
