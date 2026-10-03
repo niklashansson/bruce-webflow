@@ -262,7 +262,11 @@ function initComponent(tabWrap, componentIndex) {
   const deepLinkId = new URLSearchParams(location.search).get("tab-id");
 
   buttonItems.forEach((btn, index) => {
-    const itemIdAttr = btn.getAttribute("data-tab-item-id");
+    // The attribute lives on the wrap (per the usage docs); fall back to the
+    // inner button for components that put it there.
+    const itemIdAttr =
+      buttonWraps[index].getAttribute("data-tab-item-id") ??
+      btn.getAttribute("data-tab-item-id");
     const itemId = itemIdAttr ? slugify(itemIdAttr) : String(index + 1);
 
     const buttonId = `tab-button-${tabId}-${itemId}`;
