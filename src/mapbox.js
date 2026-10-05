@@ -7,9 +7,9 @@
 // so it loads supercluster separately alongside loadMapboxGl().
 
 export const MAPBOX_ACCESS_TOKEN =
-  "pk.eyJ1IjoibmlrbGFzaGFuc3NvbiIsImEiOiJjbWxleHI0MngxaHU3M2dzOWZrMXJpMjJlIn0.yvXc8nLFEuUocjlwqNZiJQ";
+  "pk.eyJ1IjoibWFydGVuYWxmYWtpcmxhcnNzb24iLCJhIjoiY211dXl6a3B5MHU1dDJ3cGx4ZDBheWk0cCJ9.knhvk3JqaLC1eChr9A_pgA";
 export const MAPBOX_STYLE =
-  "mapbox://styles/niklashansson/cmlextxil004n01r3d9gq7uzj";
+  "mapbox://styles/martenalfakirlarsson/cmuv2mvzq00by01s84bpv1c53";
 
 export const MAPBOX_JS_URL =
   "https://api.mapbox.com/mapbox-gl-js/v3.21.0/mapbox-gl.js";
