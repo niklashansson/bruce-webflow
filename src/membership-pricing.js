@@ -21,13 +21,16 @@
  *       data-pricing-tier="BLACK"      — required; selects tier_code from response
  *       data-pricing-locale="en"       — optional, default "sv-SE"
  *       data-pricing-fraction-digits="0" — optional, default 0
+ *       data-pricing-months="6"        — optional; which committed/prepaid period
+ *                                        to show. Default: the shortest period the
+ *                                        API offers (CPH 6, other cities 12)
  *       data-pricing-endpoint="https://…" — optional endpoint override
  *
  * When a card's variant has a discount, `is-discounted` is toggled on the card
  * root so the (static) .card_plan_price_original strike-through price is revealed.
  */
 
-import { buildTierView, findTier } from "./membership-pricing-format.js";
+import { buildTierView, findTier, resolveVariants } from "./membership-pricing-format.js";
 
 const DEFAULT_ENDPOINT = "https://api.bruce.app/partner/membership/info";
 const SAFETY_PASS_DELAYS = [500, 1500, 3500];
@@ -100,7 +103,11 @@ function applyCard(config, payload) {
   const fractionDigits =
     fdAttr != null && fdAttr.trim() !== "" ? Number(fdAttr) : 0;
 
-  const slots = buildTierView(tier, { locale, fractionDigits });
+  const monthsAttr = config.getAttribute("data-pricing-months")?.trim();
+  const months = monthsAttr ? Number(monthsAttr) : undefined;
+
+  const slots = buildTierView(tier, { locale, fractionDigits, months });
+  const variants = resolveVariants(tier.prices, { months });
 
   // Fill each price slot; flag the card as discounted if any variant it renders
   // carries a discount (reveals the strike-through original price via CSS).
@@ -110,7 +117,7 @@ function applyCard(config, payload) {
     if (!slotKey) return;
     if (slotKey in slots) el.textContent = slots[slotKey];
     const variant = slotKey.split(".")[0];
-    if (tier.prices?.[variant]?.discount != null) discounted = true;
+    if (variants[variant]?.discount != null) discounted = true;
   });
 
   root.classList.toggle(DISCOUNTED_CLASS, discounted);
